@@ -9,6 +9,11 @@
   "orientation": "portrait",
   "icons": [
     {
+      "src": "./assets/rcol-hub.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    },
+    {
       "src": "./assets/rcol-coin.webp",
       "sizes": "454x460",
       "type": "image/webp"

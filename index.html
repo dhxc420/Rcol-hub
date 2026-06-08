@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080704" />
+    <title>RCOL Hub</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./assets/rcol-coin.webp" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <nav class="topbar" aria-label="RCOL Hub">
+          <div class="brand-lockup">
+            <img src="./assets/rcol-coin.webp" alt="" />
+            <strong>RCOL Hub</strong>
+          </div>
+          <button class="round-button" id="shareButton" type="button" aria-label="Compartir RCOL">
+            <i data-lucide="share-2" aria-hidden="true"></i>
+          </button>
+        </nav>
+
+        <section class="hero-stage" aria-labelledby="appTitle">
+          <div class="flag-ribbon" aria-hidden="true"></div>
+          <img class="coin-hero" src="./assets/rcol-coin.webp" alt="Moneda RCOL Republica de Colombia" />
+          <span class="butterfly butterfly-a" aria-hidden="true">*</span>
+          <span class="butterfly butterfly-b" aria-hidden="true">*</span>
+          <span class="world-pill" id="worldStatus">
+            <span class="dot"></span>
+            <span>Comprobando World App</span>
+          </span>
+        </section>
+
+        <section class="intro">
+          <p class="eyebrow">Colombia DAO | The People's Coin</p>
+          <h1 id="appTitle">Bienvenido al Hub Oficial de RCOLombia DAO</h1>
+          <p id="tagline">Solo humanos verificados. Nuestra identidad, nuestro respaldo.</p>
+        </section>
+      </header>
+
+      <main>
+        <section class="spotlight" aria-label="Acciones principales">
+          <a class="buy-card buy-card--gold" id="pufCta" href="https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4&path=/token/0x82bf7aa0680d9c2d6ffa77b995e2092fe68d308a" target="_blank" rel="noreferrer">
+            <i data-lucide="coins" aria-hidden="true"></i>
+            <span>Comprar en PUF</span>
+          </a>
+          <a class="buy-card buy-card--pink" id="dexCta" href="https://dexscreener.com/worldchain/0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a" target="_blank" rel="noreferrer">
+            <i data-lucide="badge-dollar-sign" aria-hidden="true"></i>
+            <span>Trade RCOL en DEX</span>
+          </a>
+        </section>
+
+        <section class="identity-panel" aria-labelledby="identityTitle">
+          <div class="identity-panel__mark" id="identityMark" aria-hidden="true">
+            <i data-lucide="scan-face"></i>
+          </div>
+          <div>
+            <span class="section-label">World ID</span>
+            <h2 id="identityTitle">Verificacion de identidad</h2>
+            <p id="identityMessage">Se solicitara al abrir dentro de World App.</p>
+          </div>
+          <button class="secondary-button" id="verifyButton" type="button">
+            <i data-lucide="shield-check" aria-hidden="true"></i>
+            <span>Verificar</span>
+          </button>
+        </section>
+
+        <section class="banner-card" aria-label="RCOL identidad">
+          <img src="./assets/rcol-banner-mobile.webp" alt="RCOL nuestra identidad, nuestro respaldo" />
+        </section>
+
+        <section class="link-section" aria-labelledby="linksTitle">
+          <div class="section-heading">
+            <span class="section-label">Accesos</span>
+            <h2 id="linksTitle">Todo RCOL en 1 toque</h2>
+          </div>
+          <div class="link-grid" id="linkGrid"></div>
+        </section>
+
+        <section class="rcolito-card" aria-labelledby="rcolitoTitle">
+          <img src="./assets/rcolito-card.webp" alt="RCOLito mascota oficial de RCOL" />
+          <div>
+            <span class="section-label">RCOLito</span>
+            <h2 id="rcolitoTitle">Menos bots, mas humanos</h2>
+            <p>La mascota oficial recuerda la idea central de RCOL: comunidad real, identidad humana y construccion conjunta.</p>
+          </div>
+        </section>
+
+        <section class="token-panel" aria-label="Contrato RCOL">
+          <div>
+            <span class="section-label">Contrato</span>
+            <p id="tokenAddress">0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a</p>
+          </div>
+          <button class="copy-button" id="copyToken" type="button">
+            <i data-lucide="copy" aria-hidden="true"></i>
+            <span>Copiar</span>
+          </button>
+        </section>
+
+        <section class="community-panel" id="section-community" aria-labelledby="communityTitle">
+          <div class="section-heading">
+            <span class="section-label">Comunidad</span>
+            <h2 id="communityTitle">Canales oficiales</h2>
+          </div>
+          <div class="community-links" id="communityLinks"></div>
+        </section>
+
+        <section class="mini-kit-panel" aria-labelledby="miniKitTitle">
+          <div>
+            <span class="section-label">World App</span>
+            <h2 id="miniKitTitle">Preparado para MiniKit</h2>
+            <p id="miniKitMessage">Funciona como web normal y detecta World App cuando se abre como mini app.</p>
+          </div>
+          <button class="secondary-button" id="hapticButton" type="button">
+            <i data-lucide="sparkles" aria-hidden="true"></i>
+            <span>Probar</span>
+          </button>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <a href="#appTitle" aria-label="Inicio"><i data-lucide="home" aria-hidden="true"></i></a>
+        <a href="#linksTitle" aria-label="Accesos"><i data-lucide="grid-2x2" aria-hidden="true"></i></a>
+        <a href="#section-community" aria-label="Comunidad"><i data-lucide="users" aria-hidden="true"></i></a>
+        <a href="https://dhxc420.github.io/Rcol.fun/" target="_blank" rel="noreferrer" aria-label="Sitio web"><i data-lucide="globe-2" aria-hidden="true"></i></a>
+      </nav>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

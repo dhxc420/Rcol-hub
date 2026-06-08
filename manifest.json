@@ -1,0 +1,17 @@
+{
+  "name": "RCOL Hub",
+  "short_name": "RCOL",
+  "description": "Hub oficial de RCOLombia DAO para World App: sitio web, comunidad, Vuela RCOL, DEX y PUF.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080704",
+  "theme_color": "#080704",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./assets/rcol-coin.webp",
+      "sizes": "454x460",
+      "type": "image/webp"
+    }
+  ]
+}

@@ -41,15 +41,6 @@
           "value": "public, max-age=3600"
         }
       ]
-    },
-    {
-      "source": "/(.*\\.(js|css|webp|gif|png|woff2|eot|ttf|woff|otf|svg))",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
     }
   ]
 }

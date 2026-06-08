@@ -456,6 +456,12 @@ main {
   color: var(--accent);
 }
 
+.link-card__icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .link-card h3 {
   margin: 0 0 6px;
   font-size: 0.98rem;

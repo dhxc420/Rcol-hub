@@ -5,6 +5,8 @@ const fallbackConfig = {
   headline: "Bienvenido al Hub Oficial de RCOLombia DAO",
   tagline: "Solo humanos verificados. Nuestra identidad, nuestro respaldo.",
   tokenAddress: "0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a",
+  worldIdAppId: "app_a95edab5dd0638c6f02dcf3ff407694c",
+  worldIdRpId: "rp_013fbbe37584c9e5",
   worldIdAction: "",
   links: [
     {
@@ -28,8 +30,9 @@ const fallbackConfig = {
       title: "Vuela RCOL",
       description: "En World App",
       url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
-      icon: "butterfly",
-      accent: "#4ade80"
+      icon: "./assets/vuela-rcol.png",
+      isImage: true,
+      accent: "#facc15"
     },
     {
       id: "puf",
@@ -73,19 +76,16 @@ const fallbackConfig = {
 };
 
 let MiniKitApi = null;
-let worldAppReady = false;
 let activeConfig = null;
+let worldAppReady = false;
 
 async function loadMiniKit() {
   try {
+    const looksLikeWorldApp = Boolean(window.WorldApp) || /WorldApp|MiniKit/i.test(navigator.userAgent);
+    if (!looksLikeWorldApp) return { success: false };
+
     const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.11.0/+esm");
     MiniKitApi = mod.MiniKit;
-
-    const looksLikeWorldApp = Boolean(window.WorldApp) || /WorldApp|MiniKit/i.test(navigator.userAgent);
-    if (!looksLikeWorldApp) {
-      return { success: false };
-    }
-
     return MiniKitApi?.install?.();
   } catch {
     return { success: false };
@@ -118,6 +118,14 @@ function isInternalAnchor(url) {
   return url?.startsWith("#") && !isPlaceholder(url);
 }
 
+function renderIcon(link) {
+  if (link.isImage) {
+    return `<img src="${link.icon}" alt="" loading="lazy" />`;
+  }
+
+  return `<i data-lucide="${link.icon || "external-link"}" aria-hidden="true"></i>`;
+}
+
 function renderLinks(links) {
   const grid = document.querySelector("#linkGrid");
   grid.innerHTML = "";
@@ -140,16 +148,12 @@ function renderLinks(links) {
     }
 
     element.innerHTML = `
-      <span class="link-card__icon"><i data-lucide="${link.icon || "external-link"}" aria-hidden="true"></i></span>
+      <span class="link-card__icon">${renderIcon(link)}</span>
       <span>
         <h3>${link.title}</h3>
         <p>${link.description}</p>
       </span>
     `;
-
-    grid.appendChild(element);
-  });
-}
 
     grid.appendChild(element);
   });
@@ -182,14 +186,10 @@ function applyConfig(config) {
   document.querySelector("#tokenAddress").textContent = config.tokenAddress;
 
   const puf = config.links.find((link) => link.id === "puf");
-  if (puf && !isPlaceholder(puf.url)) {
-    document.querySelector("#pufCta").href = puf.url;
-  }
+  if (puf && !isPlaceholder(puf.url)) document.querySelector("#pufCta").href = puf.url;
 
   const dex = config.links.find((link) => link.id === "dex");
-  if (dex && !isPlaceholder(dex.url)) {
-    document.querySelector("#dexCta").href = dex.url;
-  }
+  if (dex && !isPlaceholder(dex.url)) document.querySelector("#dexCta").href = dex.url;
 
   renderLinks(config.links);
   renderCommunity(config.community || []);
@@ -218,13 +218,13 @@ async function verifyIdentity(config = activeConfig, options = {}) {
   }
 
   if (!config.worldIdAction) {
-    setIdentityState("pending", "World App detectado. Falta configurar IDKit en el Developer Portal.");
-    if (options.manual) showToast("Falta configurar IDKit");
+    setIdentityState("pending", `World App detectado. Falta crear/configurar una action para ${config.worldIdRpId}.`);
+    if (options.manual) showToast("Falta action de World ID");
     return;
   }
 
-  setIdentityState("pending", "IDKit debe conectarse a un endpoint seguro antes de solicitar World ID.");
-  if (options.manual) showToast("Configura IDKit backend");
+  setIdentityState("pending", "Falta conectar IDKit con endpoints seguros de Vercel antes de pedir el proof.");
+  if (options.manual) showToast("Falta backend IDKit");
 }
 
 async function copyToken(config) {
@@ -259,12 +259,30 @@ async function shareApp(config) {
   }
 }
 
+async function testHaptic() {
+  try {
+    if (MiniKitApi?.sendHapticFeedback) {
+      await MiniKitApi.sendHapticFeedback({ hapticsType: "impact", style: "medium" });
+      showToast("MiniKit respondio");
+      return;
+    }
+    showToast("Abre esta app dentro de World App");
+  } catch {
+    showToast("MiniKit no esta disponible aqui");
+  }
+}
+
 function updateWorldStatus(installResult) {
   const status = document.querySelector("#worldStatus");
-  worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success) || Boolean(MiniKitApi?.isInstalled?.());
+  worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success);
   status.classList.toggle("is-ready", worldAppReady);
   status.classList.toggle("is-browser", !worldAppReady);
   status.querySelector("span:last-child").textContent = worldAppReady ? "World App detectado" : "Modo navegador";
+
+  const message = document.querySelector("#miniKitMessage");
+  if (message && worldAppReady && MiniKitApi?.user?.walletAddress) {
+    message.textContent = `Wallet detectada: ${MiniKitApi.user.walletAddress.slice(0, 6)}...${MiniKitApi.user.walletAddress.slice(-4)}`;
+  }
 }
 
 async function boot() {
@@ -275,6 +293,7 @@ async function boot() {
   document.querySelector("#copyToken").addEventListener("click", () => copyToken(config));
   document.querySelector("#shareButton").addEventListener("click", () => shareApp(config));
   document.querySelector("#verifyButton").addEventListener("click", () => verifyIdentity(config, { manual: true }));
+  document.querySelector("#hapticButton")?.addEventListener("click", testHaptic);
 
   if (worldAppReady && config.worldIdAction && sessionStorage.getItem("rcol-world-id-status") !== "verified") {
     setTimeout(() => verifyIdentity(config), 700);

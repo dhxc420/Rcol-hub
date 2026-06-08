@@ -1,4 +1,4 @@
-const CONFIG_URL = "./config.json";
+const CONFIG_URL = "./config.json?v=" + new Date().getTime();
 
 const fallbackConfig = {
   brand: "RCOL Hub",

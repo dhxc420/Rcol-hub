@@ -28,7 +28,8 @@ const fallbackConfig = {
       title: "Vuela RCOL",
       description: "En World App",
       url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
-      icon: "flower",
+      icon: "./assets/vuela-rcol.png",
+      isImage: true,
       accent: "#68b344"
     },
     {
@@ -139,8 +140,12 @@ function renderLinks(links) {
       }
     }
 
+    const iconHTML = link.isImage
+      ? `<img src="${link.icon}" alt="" style="width: 44px; height: 44px; object-fit: contain;" />`
+      : `<i data-lucide="${link.icon || "external-link"}" aria-hidden="true"></i>`;
+
     element.innerHTML = `
-      <span class="link-card__icon"><i data-lucide="${link.icon || "external-link"}" aria-hidden="true"></i></span>
+      <span class="link-card__icon">${iconHTML}</span>
       <span>
         <h3>${link.title}</h3>
         <p>${link.description}</p>

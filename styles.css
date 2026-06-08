@@ -111,7 +111,6 @@ main {
 .intro,
 .spotlight,
 .token-panel,
-.mini-kit-panel,
 .section-heading,
 .link-card,
 .community-link,
@@ -295,8 +294,7 @@ main {
 }
 
 .buy-card,
-.copy-button,
-.secondary-button {
+.copy-button {
   min-height: 54px;
   border: 0;
   border-radius: 16px;
@@ -325,69 +323,14 @@ main {
 }
 
 .banner-card,
-.identity-panel,
 .rcolito-card,
 .token-panel,
-.community-panel,
-.mini-kit-panel {
+.community-panel {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--panel);
   box-shadow: 0 14px 46px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(18px);
-}
-
-.identity-panel {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-}
-
-.identity-panel__mark {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: rgba(248, 214, 109, 0.14);
-  color: var(--gold);
-}
-
-.identity-panel h2 {
-  margin: 2px 0 0;
-  font-size: 1rem;
-  letter-spacing: 0;
-}
-
-.identity-panel p {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 0.83rem;
-  line-height: 1.35;
-}
-
-.identity-panel.is-pending .identity-panel__mark svg {
-  animation: spin 900ms linear infinite;
-}
-
-.identity-panel.is-verified {
-  border-color: rgba(21, 217, 130, 0.38);
-}
-
-.identity-panel.is-verified .identity-panel__mark {
-  background: rgba(21, 217, 130, 0.16);
-  color: var(--green);
-}
-
-.identity-panel.is-error {
-  border-color: rgba(255, 20, 118, 0.36);
-}
-
-.identity-panel.is-error .identity-panel__mark {
-  background: rgba(255, 20, 118, 0.16);
-  color: var(--pink);
 }
 
 .banner-card {
@@ -412,8 +355,7 @@ main {
 }
 
 .section-heading h2,
-.rcolito-card h2,
-.mini-kit-panel h2 {
+.rcolito-card h2 {
   margin: 2px 0 0;
   color: var(--ink);
   font-size: 1.05rem;
@@ -491,16 +433,14 @@ main {
   object-position: 68% 50%;
 }
 
-.rcolito-card p,
-.mini-kit-panel p {
+.rcolito-card p {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.4;
 }
 
-.token-panel,
-.mini-kit-panel {
+.token-panel {
   justify-content: space-between;
   gap: 14px;
   padding: 16px;
@@ -517,8 +457,7 @@ main {
   text-overflow: ellipsis;
 }
 
-.copy-button,
-.secondary-button {
+.copy-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -644,21 +583,16 @@ svg {
   }
 
   .spotlight,
-  .identity-panel,
-  .mini-kit-panel,
   .token-panel {
     grid-template-columns: 1fr;
     align-items: stretch;
   }
 
   .spotlight,
-  .mini-kit-panel,
   .token-panel {
     flex-direction: column;
   }
 
-  .identity-panel .secondary-button,
-  .mini-kit-panel .secondary-button,
   .token-panel .copy-button {
     width: 100%;
   }
@@ -724,13 +658,11 @@ svg {
   }
 
   .spotlight,
-  .identity-panel,
   .banner-card,
   .link-section,
   .rcolito-card,
   .token-panel,
-  .community-panel,
-  .mini-kit-panel {
+  .community-panel {
     grid-column: span 2;
     width: 100%;
     max-width: 100%;
@@ -743,8 +675,7 @@ svg {
 
   .rcolito-card,
   .token-panel,
-  .community-panel,
-  .mini-kit-panel {
+  .community-panel {
     grid-column: span 1;
   }
 

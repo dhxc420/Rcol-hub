@@ -196,37 +196,6 @@ function applyConfig(config) {
   window.lucide?.createIcons?.();
 }
 
-function setIdentityState(state, message) {
-  const panel = document.querySelector(".identity-panel");
-  const mark = document.querySelector("#identityMark");
-  const copy = document.querySelector("#identityMessage");
-
-  panel.classList.remove("is-pending", "is-verified", "is-error", "is-browser");
-  panel.classList.add(`is-${state}`);
-  mark.innerHTML = `<i data-lucide="${state === "verified" ? "shield-check" : state === "pending" ? "loader-circle" : state === "browser" ? "monitor-smartphone" : "shield-alert"}"></i>`;
-  copy.textContent = message;
-  window.lucide?.createIcons?.();
-}
-
-async function verifyIdentity(config = activeConfig, options = {}) {
-  if (!config) return;
-
-  if (!worldAppReady) {
-    setIdentityState("browser", "Abre esta mini app dentro de World App para verificar tu World ID.");
-    if (options.manual) showToast("Abrela dentro de World App");
-    return;
-  }
-
-  if (!config.worldIdAction) {
-    setIdentityState("pending", `World App detectado. Falta crear/configurar una action para ${config.worldIdRpId}.`);
-    if (options.manual) showToast("Falta action de World ID");
-    return;
-  }
-
-  setIdentityState("pending", "Falta conectar IDKit con endpoints seguros de Vercel antes de pedir el proof.");
-  if (options.manual) showToast("Falta backend IDKit");
-}
-
 async function copyToken(config) {
   try {
     await navigator.clipboard.writeText(config.tokenAddress);
@@ -259,30 +228,12 @@ async function shareApp(config) {
   }
 }
 
-async function testHaptic() {
-  try {
-    if (MiniKitApi?.sendHapticFeedback) {
-      await MiniKitApi.sendHapticFeedback({ hapticsType: "impact", style: "medium" });
-      showToast("MiniKit respondio");
-      return;
-    }
-    showToast("Abre esta app dentro de World App");
-  } catch {
-    showToast("MiniKit no esta disponible aqui");
-  }
-}
-
 function updateWorldStatus(installResult) {
   const status = document.querySelector("#worldStatus");
   worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success);
   status.classList.toggle("is-ready", worldAppReady);
   status.classList.toggle("is-browser", !worldAppReady);
   status.querySelector("span:last-child").textContent = worldAppReady ? "World App detectado" : "Modo navegador";
-
-  const message = document.querySelector("#miniKitMessage");
-  if (message && worldAppReady && MiniKitApi?.user?.walletAddress) {
-    message.textContent = `Wallet detectada: ${MiniKitApi.user.walletAddress.slice(0, 6)}...${MiniKitApi.user.walletAddress.slice(-4)}`;
-  }
 }
 
 async function boot() {
@@ -292,16 +243,6 @@ async function boot() {
 
   document.querySelector("#copyToken").addEventListener("click", () => copyToken(config));
   document.querySelector("#shareButton").addEventListener("click", () => shareApp(config));
-  document.querySelector("#verifyButton").addEventListener("click", () => verifyIdentity(config, { manual: true }));
-  document.querySelector("#hapticButton")?.addEventListener("click", testHaptic);
-
-  if (worldAppReady && config.worldIdAction && sessionStorage.getItem("rcol-world-id-status") !== "verified") {
-    setTimeout(() => verifyIdentity(config), 700);
-  } else if (sessionStorage.getItem("rcol-world-id-status") === "verified") {
-    setIdentityState("verified", "World ID ya verificado en esta sesion.");
-  } else {
-    setIdentityState("browser", "Abre esta mini app dentro de World App para verificar tu World ID.");
-  }
 }
 
 boot();

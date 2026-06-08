@@ -255,30 +255,12 @@ async function shareApp(config) {
   }
 }
 
-async function testHaptic() {
-  try {
-    if (MiniKitApi?.sendHapticFeedback) {
-      await MiniKitApi.sendHapticFeedback({ hapticsType: "impact", style: "medium" });
-      showToast("MiniKit respondio");
-      return;
-    }
-    showToast("Abre esta app dentro de World App");
-  } catch {
-    showToast("MiniKit no esta disponible aqui");
-  }
-}
-
 function updateWorldStatus(installResult) {
   const status = document.querySelector("#worldStatus");
   worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success) || Boolean(MiniKitApi?.isInstalled?.());
   status.classList.toggle("is-ready", worldAppReady);
   status.classList.toggle("is-browser", !worldAppReady);
   status.querySelector("span:last-child").textContent = worldAppReady ? "World App detectado" : "Modo navegador";
-
-  const message = document.querySelector("#miniKitMessage");
-  if (worldAppReady && MiniKitApi?.user?.walletAddress) {
-    message.textContent = `Wallet detectada: ${MiniKitApi.user.walletAddress.slice(0, 6)}...${MiniKitApi.user.walletAddress.slice(-4)}`;
-  }
 }
 
 async function boot() {
@@ -288,7 +270,6 @@ async function boot() {
 
   document.querySelector("#copyToken").addEventListener("click", () => copyToken(config));
   document.querySelector("#shareButton").addEventListener("click", () => shareApp(config));
-  document.querySelector("#hapticButton").addEventListener("click", testHaptic);
   document.querySelector("#verifyButton").addEventListener("click", () => verifyIdentity(config, { manual: true }));
 
   if (worldAppReady && config.worldIdAction && sessionStorage.getItem("rcol-world-id-status") !== "verified") {

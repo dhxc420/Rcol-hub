@@ -553,15 +553,6 @@ main {
   font-weight: 700;
 }
 
-.mini-kit-panel {
-  align-items: flex-start;
-}
-
-.secondary-button {
-  flex: 0 0 auto;
-  min-width: 106px;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);

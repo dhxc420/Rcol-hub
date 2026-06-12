@@ -8,6 +8,16 @@
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./assets/rcol-hub.ico" />
     <link rel="icon" href="./assets/rcol-coin.webp" type="image/webp" />
+    <script>
+      (function () {
+        var theme = null;
+        try { theme = localStorage.getItem("rcol-theme"); } catch (e) {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <script type="module" src="./app.js"></script>
@@ -21,9 +31,15 @@
             <img src="./assets/rcol-coin.webp" alt="" />
             <strong>RCOL Hub</strong>
           </div>
-          <button class="round-button" id="shareButton" type="button" aria-label="Compartir RCOL">
-            <i data-lucide="share-2" aria-hidden="true"></i>
-          </button>
+          <div class="topbar-actions">
+            <button class="round-button" id="themeToggle" type="button" aria-label="Cambiar tema claro u oscuro">
+              <i data-lucide="sun" class="theme-icon icon-sun" aria-hidden="true"></i>
+              <i data-lucide="moon" class="theme-icon icon-moon" aria-hidden="true"></i>
+            </button>
+            <button class="round-button" id="shareButton" type="button" aria-label="Compartir RCOL">
+              <i data-lucide="share-2" aria-hidden="true"></i>
+            </button>
+          </div>
         </nav>
 
         <section class="hero-stage" aria-labelledby="appTitle">
@@ -54,6 +70,69 @@
             <i data-lucide="badge-dollar-sign" aria-hidden="true"></i>
             <span>Trade RCOL en DEX</span>
           </a>
+        </section>
+
+        <section class="panel market-panel" id="section-market" aria-labelledby="marketTitle">
+          <div class="section-heading">
+            <span class="section-label">Mercado</span>
+            <h2 id="marketTitle">RCOL en cifras</h2>
+          </div>
+          <div class="market-grid">
+            <article class="stat-card">
+              <span class="stat-label">Market Cap</span>
+              <strong id="statMcap">—</strong>
+              <small id="statPrice">Precio en vivo</small>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Liquidez</span>
+              <strong id="statLiq">—</strong>
+              <small>Pool principal</small>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Quemados</span>
+              <strong id="statBurn">—</strong>
+              <small id="statBurnPct">RCOL fuera de circulacion</small>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Holders</span>
+              <strong id="statHolders">—</strong>
+              <small>Humanos en Worldchain</small>
+            </article>
+          </div>
+          <p class="panel-note">Datos en vivo de DexScreener y Worldchain</p>
+        </section>
+
+        <section class="panel swap-panel" id="section-swap" aria-labelledby="swapTitle">
+          <div class="section-heading">
+            <span class="section-label">Swap</span>
+            <h2 id="swapTitle">Cambia tokens por RCOL</h2>
+          </div>
+          <div class="swap-box">
+            <div class="swap-field">
+              <label for="swapAmount">Pagas</label>
+              <div class="swap-row">
+                <input id="swapAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
+                <select class="token-select" id="swapFrom" aria-label="Token que pagas"></select>
+              </div>
+              <small id="swapFromUsd">&nbsp;</small>
+            </div>
+            <button class="swap-invert" id="swapInvert" type="button" aria-label="Invertir tokens">
+              <i data-lucide="arrow-down-up" aria-hidden="true"></i>
+            </button>
+            <div class="swap-field">
+              <label for="swapTo">Recibes (estimado)</label>
+              <div class="swap-row">
+                <output id="swapOut" for="swapAmount">0.0</output>
+                <select class="token-select" id="swapTo" aria-label="Token que recibes"></select>
+              </div>
+              <small id="swapToUsd">&nbsp;</small>
+            </div>
+            <button class="swap-cta" id="swapCta" type="button">
+              <i data-lucide="repeat" aria-hidden="true"></i>
+              <span>Swap en World App</span>
+            </button>
+            <p class="panel-note">El swap se confirma en UNO dentro de World App. Solo tokens verificados.</p>
+          </div>
         </section>
 
         <section class="banner-card" aria-label="RCOL identidad">
@@ -100,13 +179,13 @@
 
       <nav class="bottom-nav" aria-label="Navegacion principal">
         <a href="#appTitle" aria-label="Inicio"><i data-lucide="home" aria-hidden="true"></i></a>
+        <a href="#section-market" aria-label="Mercado"><i data-lucide="chart-line" aria-hidden="true"></i></a>
+        <a href="#section-swap" aria-label="Swap"><i data-lucide="arrow-left-right" aria-hidden="true"></i></a>
         <a href="#linksTitle" aria-label="Accesos"><i data-lucide="grid-2x2" aria-hidden="true"></i></a>
         <a href="#section-community" aria-label="Comunidad"><i data-lucide="users" aria-hidden="true"></i></a>
-        <a href="https://dhxc420.github.io/Rcol.fun/" target="_blank" rel="noreferrer" aria-label="Sitio web"><i data-lucide="globe-2" aria-hidden="true"></i></a>
       </nav>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>
-

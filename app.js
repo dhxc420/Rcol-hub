@@ -5,7 +5,7 @@ const RCOL_DECIMALS = 18;
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
 const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2/tokens/";
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
-const UNO_APP_ID = "app_a4f7f3e62c1de0b9490a5260cb390b56";
+const PUF_APP_ID = "app_e5ba7c3061400e361f98ce44d8b1b9c4";
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -433,14 +433,9 @@ function setupSwap() {
   });
 
   ctaButton.addEventListener("click", () => {
-    const from = SWAP_TOKENS.find((token) => token.symbol === fromSelect.value);
-    const to = SWAP_TOKENS.find((token) => token.symbol === toSelect.value);
-    const amount = parseFloat(amountInput.value);
-
-    let path = `/?tab=swap&fromToken=${from.address}&toToken=${to.address}`;
-    if (amount > 0) path += `&amountIn=${amount}`;
-
-    const url = `https://world.org/mini-app?app_id=${UNO_APP_ID}&path=${encodeURIComponent(path)}`;
+    // PUF Wallet abre la pagina del token RCOL, donde se compra o vende contra tokens verificados.
+    const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
+    const url = `https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`;
     window.open(url, "_blank", "noreferrer");
   });
 

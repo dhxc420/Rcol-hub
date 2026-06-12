@@ -232,9 +232,6 @@ function applyConfig(config) {
   const puf = config.links.find((link) => link.id === "puf");
   if (puf && !isPlaceholder(puf.url)) document.querySelector("#pufCta").href = puf.url;
 
-  const dex = config.links.find((link) => link.id === "dex");
-  if (dex && !isPlaceholder(dex.url)) document.querySelector("#dexCta").href = dex.url;
-
   renderLinks(config.links);
   renderCommunity(config.community || []);
   window.lucide?.createIcons?.();

@@ -19,6 +19,19 @@
       })();
     </script>
     <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "ethers": "https://cdn.jsdelivr.net/npm/ethers@6.16.0/+esm",
+          "bignumber.js": "./vendor/bignumber-shim.mjs",
+          "async-mutex": "https://cdn.jsdelivr.net/npm/async-mutex@0.5.0/+esm",
+          "idb": "https://cdn.jsdelivr.net/npm/idb@8.0.3/+esm",
+          "@worldcoin/minikit-js": "https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.11.0/+esm",
+          "@holdstation/worldchain-sdk": "./vendor/holdstation-sdk.mjs",
+          "@holdstation/worldchain-ethers-v6": "./vendor/holdstation-ethers-v6.mjs"
+        }
+      }
+    </script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <script type="module" src="./app.js"></script>
   </head>
@@ -129,9 +142,9 @@
             </div>
             <button class="swap-cta" id="swapCta" type="button">
               <i data-lucide="repeat" aria-hidden="true"></i>
-              <span>Swap en PUF Wallet</span>
+              <span>Swap ahora</span>
             </button>
-            <p class="panel-note">El swap se confirma en PUF Wallet dentro de World App. Solo tokens verificados.</p>
+            <p class="panel-note">El swap se firma directo con tu wallet de World App. Solo tokens verificados.</p>
           </div>
         </section>
 

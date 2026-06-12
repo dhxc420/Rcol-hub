@@ -71,10 +71,19 @@ const fallbackConfig = {
     {
       id: "chart",
       title: "Chart RCOL",
-      description: "Buscar precio y pares",
-      url: "https://dexscreener.com/worldchain/0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a",
+      description: "Precio y pares",
       icon: "line-chart",
-      accent: "#38bdf8"
+      accent: "#38bdf8",
+      actions: [
+        {
+          label: "DexScreener",
+          url: "https://dexscreener.com/worldchain/0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a"
+        },
+        {
+          label: "GeckoTerminal",
+          url: "https://www.geckoterminal.com/es/world-chain/pools/0xe5f1c6b95cf182b09807b73f21f622fae08dd439"
+        }
+      ]
     }
   ],
   community: [
@@ -103,7 +112,8 @@ async function loadMiniKit() {
     const looksLikeWorldApp = Boolean(window.WorldApp) || /WorldApp|MiniKit/i.test(navigator.userAgent);
     if (!looksLikeWorldApp) return { success: false };
 
-    const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.11.0/+esm");
+    // Mismo modulo que usa el SDK de swap (via import map) para compartir la instancia instalada.
+    const mod = await import("@worldcoin/minikit-js");
     MiniKitApi = mod.MiniKit;
     return MiniKitApi?.install?.();
   } catch {
@@ -150,6 +160,28 @@ function renderLinks(links) {
   grid.innerHTML = "";
 
   links.forEach((link) => {
+    if (Array.isArray(link.actions) && link.actions.length) {
+      const card = document.createElement("div");
+      card.className = "link-card link-card--group";
+      card.style.setProperty("--accent", link.accent || "#f8d66d");
+      card.innerHTML = `
+        <span class="link-card__icon">${renderIcon(link)}</span>
+        <span class="link-card__body">
+          <h3>${link.title}</h3>
+          <span class="link-card__actions">
+            ${link.actions
+              .map(
+                (action) =>
+                  `<a href="${action.url}" target="_blank" rel="noreferrer">${action.label}</a>`
+              )
+              .join("")}
+          </span>
+        </span>
+      `;
+      grid.appendChild(card);
+      return;
+    }
+
     const disabled = isPlaceholder(link.url);
     const element = document.createElement(disabled ? "button" : "a");
     element.className = `link-card${disabled ? " is-disabled" : ""}`;
@@ -390,6 +422,49 @@ function loadMarketData() {
   Promise.allSettled([fetchDexData(), fetchHolders(), fetchBurned()]);
 }
 
+/* ---------- Motor de swap (HoldStation SDK + MiniKit) ---------- */
+
+const SLIPPAGE = "0.5";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+let swapEnginePromise = null;
+
+function getSwapEngine() {
+  if (!swapEnginePromise) {
+    swapEnginePromise = (async () => {
+      const [{ ethers }, sdk, adapter] = await Promise.all([
+        import("ethers"),
+        import("@holdstation/worldchain-sdk"),
+        import("@holdstation/worldchain-ethers-v6")
+      ]);
+
+      const provider = new ethers.JsonRpcProvider(
+        WORLDCHAIN_RPC,
+        { chainId: 480, name: "worldchain" },
+        { staticNetwork: true }
+      );
+      const client = new adapter.Client(provider);
+      sdk.config.client = client;
+      sdk.config.multicall3 = new adapter.Multicall3(provider);
+
+      const tokenProvider = new sdk.TokenProvider({ client, multicall3: sdk.config.multicall3 });
+      const swapHelper = new sdk.SwapHelper(client, { tokenStorage: sdk.inmemoryTokenStorage });
+      swapHelper.load(new sdk.ZeroX(tokenProvider, sdk.inmemoryTokenStorage));
+      swapHelper.load(new sdk.HoldSo(tokenProvider, sdk.inmemoryTokenStorage));
+      return swapHelper;
+    })().catch((error) => {
+      swapEnginePromise = null;
+      throw error;
+    });
+  }
+  return swapEnginePromise;
+}
+
+function openPufFallback() {
+  // Fallback: PUF Wallet abre la pagina del token RCOL para completar el cambio.
+  const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
+  window.open(`https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`, "_blank", "noreferrer");
+}
+
 /* ---------- Swap ---------- */
 
 function setupSwap() {
@@ -432,11 +507,65 @@ function setupSwap() {
     updateSwapQuote();
   });
 
-  ctaButton.addEventListener("click", () => {
-    // PUF Wallet abre la pagina del token RCOL, donde se compra o vende contra tokens verificados.
-    const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
-    const url = `https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`;
-    window.open(url, "_blank", "noreferrer");
+  const ctaLabel = ctaButton.querySelector("span");
+  const setCta = (text, disabled) => {
+    ctaLabel.textContent = text;
+    ctaButton.disabled = disabled;
+    ctaButton.classList.toggle("is-busy", disabled);
+  };
+
+  ctaButton.addEventListener("click", async () => {
+    const amount = parseFloat(amountInput.value);
+    if (!(amount > 0)) {
+      showToast("Ingresa una cantidad para cambiar");
+      amountInput.focus();
+      return;
+    }
+
+    if (!worldAppReady) {
+      showToast("Abre el hub en World App para firmar el swap");
+      openPufFallback();
+      return;
+    }
+
+    const from = SWAP_TOKENS.find((token) => token.symbol === fromSelect.value);
+    const to = SWAP_TOKENS.find((token) => token.symbol === toSelect.value);
+    const params = {
+      tokenIn: from.address,
+      tokenOut: to.address,
+      amountIn: String(amount),
+      slippage: SLIPPAGE,
+      fee: "0"
+    };
+
+    try {
+      setCta("Cotizando...", true);
+      const swapHelper = await getSwapEngine();
+      const quote = await swapHelper.estimate.quote(params);
+
+      setCta("Confirma en tu wallet...", true);
+      const result = await swapHelper.swap({
+        ...params,
+        tx: { data: quote.data, to: quote.to, value: quote.value },
+        feeAmountOut: quote.addons?.feeAmountOut,
+        feeReceiver: ZERO_ADDRESS
+      });
+
+      if (result.success) {
+        showToast(`Swap enviado: ${amount} ${from.symbol} -> ${to.symbol}`);
+        amountInput.value = "";
+        updateSwapQuote();
+        setTimeout(loadMarketData, 10000);
+      } else {
+        showToast(`Swap rechazado (${result.errorCode || "error"})`);
+      }
+    } catch (error) {
+      console.error("Swap error:", error);
+      showToast("No se pudo cotizar el swap, abriendo PUF Wallet");
+      openPufFallback();
+    } finally {
+      setCta("Swap ahora", false);
+    }
   });
 
   updateSwapQuote();

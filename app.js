@@ -11,12 +11,20 @@ const BURN_ADDRESSES = [
   "0x0000000000000000000000000000000000000000"
 ];
 
+const WLD_ADDRESS = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
+
 const SWAP_TOKENS = [
-  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS },
-  { symbol: "WLD", name: "Worldcoin", address: "0x2cFc85d8E48F8EAB294be644d9E25C3030863003" },
-  { symbol: "USDC", name: "USD Coin", address: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1" },
-  { symbol: "WETH", name: "Ethereum", address: "0x4200000000000000000000000000000000000006" }
+  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18 },
+  { symbol: "WLD", name: "Worldcoin", address: WLD_ADDRESS, decimals: 18 },
+  { symbol: "USDC", name: "USD Coin", address: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1", decimals: 6 },
+  { symbol: "WETH", name: "Ethereum", address: "0x4200000000000000000000000000000000000006", decimals: 18 }
 ];
+
+// RCOL solo tiene liquidez contra WLD (pool Uniswap v2 en Worldchain).
+// Cualquier otro token se enruta a traves de WLD.
+const UNISWAP_V2_ROUTER = "0x541aB7c31A119441eF3575F6973277DE0eF460bd";
+const SWAP_SLIPPAGE_BPS = 100n; // 1.0%
+const SWAP_DEADLINE_MIN = 20;
 
 const fallbackConfig = {
   brand: "RCOL Hub",
@@ -104,8 +112,7 @@ async function loadMiniKit() {
     const looksLikeWorldApp = Boolean(window.WorldApp) || /WorldApp|MiniKit/i.test(navigator.userAgent);
     if (!looksLikeWorldApp) return { success: false };
 
-    // Mismo modulo que usa el SDK de swap (via import map) para compartir la instancia instalada.
-    const mod = await import("@worldcoin/minikit-js");
+    const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.11.0/+esm");
     MiniKitApi = mod.MiniKit;
     return MiniKitApi?.install?.();
   } catch {
@@ -382,7 +389,7 @@ async function fetchDexData() {
     setStat("statPrice", `1 RCOL ≈ $${formatPrice(rcolPair.priceUsd)}`);
   }
 
-  updateSwapQuote();
+  scheduleQuote();
 }
 
 async function fetchHolders() {
@@ -411,47 +418,117 @@ function loadMarketData() {
   Promise.allSettled([fetchDexData(), fetchHolders(), fetchBurned()]);
 }
 
-/* ---------- Motor de swap (HoldStation SDK + MiniKit) ---------- */
+/* ---------- Motor de swap (Uniswap v2 directo + MiniKit) ---------- */
 
-const SLIPPAGE = "0.5";
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-let swapEnginePromise = null;
-
-function getSwapEngine() {
-  if (!swapEnginePromise) {
-    swapEnginePromise = (async () => {
-      const [{ ethers }, sdk, adapter] = await Promise.all([
-        import("ethers"),
-        import("@holdstation/worldchain-sdk"),
-        import("@holdstation/worldchain-ethers-v6")
-      ]);
-
-      const provider = new ethers.JsonRpcProvider(
-        WORLDCHAIN_RPC,
-        { chainId: 480, name: "worldchain" },
-        { staticNetwork: true }
-      );
-      const client = new adapter.Client(provider);
-      sdk.config.client = client;
-      sdk.config.multicall3 = new adapter.Multicall3(provider);
-
-      const tokenProvider = new sdk.TokenProvider({ client, multicall3: sdk.config.multicall3 });
-      const swapHelper = new sdk.SwapHelper(client, { tokenStorage: sdk.inmemoryTokenStorage });
-      swapHelper.load(new sdk.ZeroX(tokenProvider, sdk.inmemoryTokenStorage));
-      swapHelper.load(new sdk.HoldSo(tokenProvider, sdk.inmemoryTokenStorage));
-      return swapHelper;
-    })().catch((error) => {
-      swapEnginePromise = null;
-      throw error;
-    });
+const ERC20_APPROVE_ABI = [
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    outputs: [{ name: "", type: "bool" }]
   }
-  return swapEnginePromise;
-}
+];
+
+const V2_SWAP_ABI = [
+  {
+    name: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "amountIn", type: "uint256" },
+      { name: "amountOutMin", type: "uint256" },
+      { name: "path", type: "address[]" },
+      { name: "to", type: "address" },
+      { name: "deadline", type: "uint256" }
+    ],
+    outputs: []
+  }
+];
+
+const tokenBySymbol = Object.fromEntries(SWAP_TOKENS.map((token) => [token.symbol, token]));
+let cachedWalletAddress = null;
+let lastQuote = null;
+let quoteTimer = null;
+let quoteSeq = 0;
 
 function openPufFallback() {
-  // Fallback: PUF Wallet abre la pagina del token RCOL para completar el cambio.
+  // Respaldo: PUF Wallet abre la pagina del token RCOL para completar el cambio.
   const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
   window.open(`https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`, "_blank", "noreferrer");
+}
+
+// Convierte un monto decimal en unidades enteras (wei) segun los decimales del token.
+function toBaseUnits(amountStr, decimals) {
+  const clean = String(amountStr).trim().replace(/,/g, ".");
+  if (!/^\d*\.?\d*$/.test(clean) || clean === "" || clean === ".") return 0n;
+  const [intPart, fracPart = ""] = clean.split(".");
+  const frac = (fracPart + "0".repeat(decimals)).slice(0, decimals);
+  return BigInt((intPart || "0") + frac);
+}
+
+function fromBaseUnits(value, decimals) {
+  const s = value.toString().padStart(decimals + 1, "0");
+  const intPart = s.slice(0, s.length - decimals);
+  const fracPart = s.slice(s.length - decimals).replace(/0+$/, "");
+  return fracPart ? `${intPart}.${fracPart}` : intPart;
+}
+
+function pad32(hexNoPrefix) {
+  return hexNoPrefix.toLowerCase().padStart(64, "0");
+}
+
+// Ruta de swap: RCOL solo tiene pool contra WLD, todo lo demas pasa por WLD.
+function buildPath(fromSym, toSym) {
+  const a = tokenBySymbol[fromSym].address;
+  const b = tokenBySymbol[toSym].address;
+  if (fromSym === "WLD" || toSym === "WLD") return [a, b];
+  return [a, WLD_ADDRESS, b];
+}
+
+async function ethCall(to, data) {
+  const response = await fetch(WORLDCHAIN_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] })
+  });
+  const json = await response.json();
+  if (json.error) throw new Error(json.error.message || "eth_call error");
+  return json.result;
+}
+
+// getAmountsOut(uint256, address[]) on-chain: cotizacion real ejecutable.
+async function quoteAmountOut(amountInWei, path) {
+  const head = pad32(amountInWei.toString(16)) + pad32("40") + pad32(path.length.toString(16));
+  const addrs = path.map((addr) => pad32(addr.slice(2))).join("");
+  const data = "0xd06ca61f" + head + addrs;
+  const result = await ethCall(UNISWAP_V2_ROUTER, data);
+  if (!result || result === "0x") return null;
+  const last = result.slice(2).slice(-64);
+  return BigInt("0x" + last);
+}
+
+async function getWalletAddress() {
+  if (cachedWalletAddress) return cachedWalletAddress;
+  const known = MiniKitApi?.user?.walletAddress;
+  if (known) {
+    cachedWalletAddress = known;
+    return known;
+  }
+  const nonce = (Math.random().toString(36) + Date.now().toString(36)).replace(/[^a-z0-9]/g, "").slice(0, 16);
+  const { finalPayload } = await MiniKitApi.commandsAsync.walletAuth({
+    nonce,
+    statement: "Conecta tu wallet para hacer swap en RCOL Hub",
+    expirationTime: new Date(Date.now() + 10 * 60 * 1000)
+  });
+  if (finalPayload?.status === "success" && finalPayload.address) {
+    cachedWalletAddress = finalPayload.address;
+    return finalPayload.address;
+  }
+  return null;
 }
 
 /* ---------- Swap ---------- */
@@ -481,19 +558,19 @@ function setupSwap() {
 
   fromSelect.addEventListener("change", () => {
     enforcePair(fromSelect);
-    updateSwapQuote();
+    scheduleQuote();
   });
   toSelect.addEventListener("change", () => {
     enforcePair(toSelect);
-    updateSwapQuote();
+    scheduleQuote();
   });
-  amountInput.addEventListener("input", updateSwapQuote);
+  amountInput.addEventListener("input", scheduleQuote);
 
   invertButton.addEventListener("click", () => {
     const previousFrom = fromSelect.value;
     fromSelect.value = toSelect.value;
     toSelect.value = previousFrom;
-    updateSwapQuote();
+    scheduleQuote();
   });
 
   const ctaLabel = ctaButton.querySelector("span");
@@ -504,85 +581,164 @@ function setupSwap() {
   };
 
   ctaButton.addEventListener("click", async () => {
+    const fromSym = fromSelect.value;
+    const toSym = toSelect.value;
     const amount = parseFloat(amountInput.value);
+
     if (!(amount > 0)) {
       showToast("Ingresa una cantidad para cambiar");
       amountInput.focus();
       return;
     }
 
-    if (!worldAppReady) {
+    if (!worldAppReady || !MiniKitApi) {
       showToast("Abre el hub en World App para firmar el swap");
       openPufFallback();
       return;
     }
 
-    const from = SWAP_TOKENS.find((token) => token.symbol === fromSelect.value);
-    const to = SWAP_TOKENS.find((token) => token.symbol === toSelect.value);
-    const params = {
-      tokenIn: from.address,
-      tokenOut: to.address,
-      amountIn: String(amount),
-      slippage: SLIPPAGE,
-      fee: "0"
-    };
+    const fromToken = tokenBySymbol[fromSym];
+    const path = buildPath(fromSym, toSym);
+    const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
 
     try {
       setCta("Cotizando...", true);
-      const swapHelper = await getSwapEngine();
-      const quote = await swapHelper.estimate.quote(params);
+      const amountOut = await quoteAmountOut(amountInWei, path);
+      if (!amountOut || amountOut === 0n) {
+        showToast("Sin liquidez para ese par ahora");
+        return;
+      }
+      const minOut = (amountOut * (10000n - SWAP_SLIPPAGE_BPS)) / 10000n;
+
+      setCta("Conectando wallet...", true);
+      const address = await getWalletAddress();
+      if (!address) {
+        showToast("No se pudo conectar la wallet");
+        return;
+      }
+
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
 
       setCta("Confirma en tu wallet...", true);
-      const result = await swapHelper.swap({
-        ...params,
-        tx: { data: quote.data, to: quote.to, value: quote.value },
-        feeAmountOut: quote.addons?.feeAmountOut,
-        feeReceiver: ZERO_ADDRESS
+      const { finalPayload } = await MiniKitApi.commandsAsync.sendTransaction({
+        transaction: [
+          {
+            address: fromToken.address,
+            abi: ERC20_APPROVE_ABI,
+            functionName: "approve",
+            args: [UNISWAP_V2_ROUTER, amountInWei.toString()]
+          },
+          {
+            address: UNISWAP_V2_ROUTER,
+            abi: V2_SWAP_ABI,
+            functionName: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
+            args: [amountInWei.toString(), minOut.toString(), path, address, deadline.toString()]
+          }
+        ]
       });
 
-      if (result.success) {
-        showToast(`Swap enviado: ${amount} ${from.symbol} -> ${to.symbol}`);
+      if (finalPayload?.status === "success") {
+        showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
         amountInput.value = "";
-        updateSwapQuote();
-        setTimeout(loadMarketData, 10000);
+        renderQuote(null);
+        setTimeout(loadMarketData, 12000);
+      } else if (finalPayload?.error_code === "user_rejected") {
+        showToast("Swap cancelado");
       } else {
-        showToast(`Swap rechazado (${result.errorCode || "error"})`);
+        showToast(`No se completo el swap (${finalPayload?.error_code || "error"})`);
       }
     } catch (error) {
       console.error("Swap error:", error);
-      showToast("No se pudo cotizar el swap, abriendo PUF Wallet");
-      openPufFallback();
+      showToast("No se pudo completar el swap, intenta de nuevo");
     } finally {
       setCta("Swap ahora", false);
     }
   });
 
-  updateSwapQuote();
+  scheduleQuote();
 }
 
-function updateSwapQuote() {
+function scheduleQuote() {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(runQuote, 350);
+}
+
+async function runQuote() {
   const fromSelect = document.querySelector("#swapFrom");
   const toSelect = document.querySelector("#swapTo");
   const amountInput = document.querySelector("#swapAmount");
+  if (!fromSelect || !toSelect || !amountInput) return;
+
+  const fromSym = fromSelect.value;
+  const toSym = toSelect.value;
+  const fromToken = tokenBySymbol[fromSym];
+  const toToken = tokenBySymbol[toSym];
+  const amount = parseFloat(amountInput.value) || 0;
+
+  if (!(amount > 0)) {
+    lastQuote = null;
+    renderQuote(null);
+    return;
+  }
+
+  const seq = ++quoteSeq;
+  renderQuote({ loading: true });
+
+  try {
+    const path = buildPath(fromSym, toSym);
+    const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
+    const amountOut = await quoteAmountOut(amountInWei, path);
+    if (seq !== quoteSeq) return; // llego una cotizacion mas nueva
+
+    if (!amountOut || amountOut === 0n) {
+      lastQuote = null;
+      renderQuote({ empty: true });
+      return;
+    }
+
+    const outNum = Number(fromBaseUnits(amountOut, toToken.decimals));
+    const usd = tokenPrices[toSym] ? outNum * tokenPrices[toSym] : null;
+    lastQuote = { fromSym, toSym, amountInWei, amountOut, path };
+    renderQuote({ outNum, usd, fromSym, amount });
+  } catch (error) {
+    if (seq !== quoteSeq) return;
+    console.error("Quote error:", error);
+    lastQuote = null;
+    renderQuote({ error: true });
+  }
+}
+
+function renderQuote(state) {
   const output = document.querySelector("#swapOut");
   const fromUsd = document.querySelector("#swapFromUsd");
   const toUsd = document.querySelector("#swapToUsd");
-  if (!fromSelect || !toSelect || !output) return;
+  if (!output) return;
 
-  const amount = parseFloat(amountInput.value) || 0;
-  const priceFrom = tokenPrices[fromSelect.value];
-  const priceTo = tokenPrices[toSelect.value];
-
-  if (amount > 0 && priceFrom > 0 && priceTo > 0) {
-    const usdValue = amount * priceFrom;
-    output.textContent = formatTokenAmount(usdValue / priceTo);
-    fromUsd.textContent = `≈ $${formatPrice(usdValue)}`;
-    toUsd.textContent = `≈ $${formatPrice(usdValue)} · precio DexScreener`;
-  } else {
+  if (!state) {
     output.textContent = "0.0";
     fromUsd.innerHTML = "&nbsp;";
-    toUsd.textContent = amount > 0 ? "Cargando precios..." : " ";
+    toUsd.innerHTML = "&nbsp;";
+    return;
   }
+  if (state.loading) {
+    toUsd.textContent = "Calculando precio on-chain...";
+    return;
+  }
+  if (state.empty) {
+    output.textContent = "â";
+    toUsd.textContent = "Sin liquidez para esta ruta";
+    return;
+  }
+  if (state.error) {
+    output.textContent = "â";
+    toUsd.textContent = "No se pudo cotizar, reintenta";
+    return;
+  }
+
+  output.textContent = formatTokenAmount(state.outNum);
+  const fromUsdValue = tokenPrices[state.fromSym] ? state.amount * tokenPrices[state.fromSym] : null;
+  fromUsd.textContent = fromUsdValue ? `≈ $${formatPrice(fromUsdValue)}` : " ";
+  toUsd.textContent = state.usd ? `≈ $${formatPrice(state.usd)} · on-chain` : "Precio on-chain Uniswap";
 }
 
 /* ---------- Boot ---------- */

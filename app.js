@@ -23,7 +23,9 @@ const SWAP_TOKENS = [
 // RCOL solo tiene liquidez contra WLD (pool Uniswap v2 en Worldchain).
 // Cualquier otro token se enruta a traves de WLD.
 const UNISWAP_V2_ROUTER = "0x541aB7c31A119441eF3575F6973277DE0eF460bd";
-const SWAP_SLIPPAGE_BPS = 100n; // 1.0%
+// RCOL cobra ~2% de impuesto en cada transferencia (token fee-on-transfer),
+// que getAmountsOut no refleja. El slippage debe cubrir ese impuesto + movimiento.
+const SWAP_SLIPPAGE_BPS = 400n; // 4.0%
 const SWAP_DEADLINE_MIN = 20;
 
 const fallbackConfig = {

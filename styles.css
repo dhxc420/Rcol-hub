@@ -423,6 +423,27 @@ main > section,
   text-align: center;
 }
 
+.swap-fee {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 2px 0 0;
+  color: var(--green, #15d982);
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+html[data-theme="light"] .swap-fee {
+  color: #0f9d58;
+}
+
+.swap-fee svg {
+  width: 15px;
+  height: 15px;
+}
+
 .banner-card {
   overflow: hidden;
 }

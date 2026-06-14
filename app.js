@@ -12,6 +12,8 @@ const BURN_ADDRESSES = [
 ];
 
 const WLD_ADDRESS = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
+const RCOL_POOL = "0xe5f1c6b95cf182b09807b73f21f622fae08dd439"; // pool Uniswap v2 RCOL/WLD
+const GECKO_OHLCV_API = `https://api.geckoterminal.com/api/v2/networks/world-chain/pools/${RCOL_POOL}/ohlcv/hour?aggregate=1&limit=24`;
 
 const SWAP_TOKENS = [
   { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18 },
@@ -140,6 +142,12 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])
+  );
+}
+
 function isPlaceholder(url) {
   return !url || url.startsWith("#pendiente");
 }
@@ -150,10 +158,10 @@ function isInternalAnchor(url) {
 
 function renderIcon(link) {
   if (link.isImage) {
-    return `<img src="${link.icon}" alt="" loading="lazy" />`;
+    return `<img src="${escapeHtml(link.icon)}" alt="" loading="lazy" />`;
   }
 
-  return `<i data-lucide="${link.icon || "external-link"}" aria-hidden="true"></i>`;
+  return `<i data-lucide="${escapeHtml(link.icon || "external-link")}" aria-hidden="true"></i>`;
 }
 
 function renderLinks(links) {
@@ -168,12 +176,12 @@ function renderLinks(links) {
       card.innerHTML = `
         <span class="link-card__icon">${renderIcon(link)}</span>
         <span class="link-card__body">
-          <h3>${link.title}</h3>
+          <h3>${escapeHtml(link.title)}</h3>
           <span class="link-card__actions">
             ${link.actions
               .map(
                 (action) =>
-                  `<a href="${action.url}" target="_blank" rel="noreferrer">${action.label}</a>`
+                  `<a href="${encodeURI(action.url)}" target="_blank" rel="noreferrer">${escapeHtml(action.label)}</a>`
               )
               .join("")}
           </span>
@@ -202,8 +210,8 @@ function renderLinks(links) {
     element.innerHTML = `
       <span class="link-card__icon">${renderIcon(link)}</span>
       <span class="link-card__body">
-        <h3>${link.title}</h3>
-        <p>${link.description}</p>
+        <h3>${escapeHtml(link.title)}</h3>
+        <p>${escapeHtml(link.description)}</p>
       </span>
       <i data-lucide="chevron-right" class="link-card__chevron" aria-hidden="true"></i>
     `;
@@ -223,8 +231,8 @@ function renderCommunity(community) {
     element.target = "_blank";
     element.rel = "noreferrer";
     element.innerHTML = `
-      <i data-lucide="${item.icon || "link"}" aria-hidden="true"></i>
-      <span>${item.title}<small>${item.handle}</small></span>
+      <i data-lucide="${escapeHtml(item.icon || "link")}" aria-hidden="true"></i>
+      <span>${escapeHtml(item.title)}<small>${escapeHtml(item.handle)}</small></span>
     `;
     wrapper.appendChild(element);
   });
@@ -389,9 +397,65 @@ async function fetchDexData() {
     setStat("statMcap", formatUsd(rcolPair.marketCap ?? rcolPair.fdv));
     setStat("statLiq", formatUsd(rcolPair.liquidity?.usd));
     setStat("statPrice", `1 RCOL ≈ $${formatPrice(rcolPair.priceUsd)}`);
+    setStat("priceNow", `$${formatPrice(rcolPair.priceUsd)}`);
+    renderPriceChange(rcolPair.priceChange?.h24);
   }
 
   scheduleQuote();
+}
+
+function renderPriceChange(change) {
+  const badge = document.querySelector("#priceChange24");
+  if (!badge || change == null || !isFinite(change)) return;
+  const up = change >= 0;
+  badge.textContent = `${up ? "▲" : "▼"} ${Math.abs(change).toFixed(2)}% 24h`;
+  badge.style.setProperty("--spark", up ? "#15d982" : "#ff4d6d");
+  const hero = document.querySelector("#priceHero");
+  if (hero) hero.style.setProperty("--spark", up ? "#15d982" : "#ff4d6d");
+}
+
+async function fetchPriceChart() {
+  const response = await fetch(GECKO_OHLCV_API, { headers: { Accept: "application/json" } });
+  if (!response.ok) return;
+  const json = await response.json();
+  const list = json?.data?.attributes?.ohlcv_list || [];
+  // GeckoTerminal devuelve [ts, open, high, low, close, volume], mas reciente primero.
+  const closes = list
+    .map((candle) => Number(candle[4]))
+    .filter((value) => isFinite(value) && value > 0)
+    .reverse();
+  if (closes.length >= 2) renderSparkline(closes);
+}
+
+function renderSparkline(values) {
+  const line = document.querySelector("#sparkLine");
+  const area = document.querySelector("#sparkArea");
+  if (!line || !area) return;
+
+  const width = 100;
+  const height = 40;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const stepX = width / (values.length - 1);
+
+  const points = values.map((value, i) => {
+    const x = i * stepX;
+    const y = pad + (1 - (value - min) / span) * (height - pad * 2);
+    return [x, y];
+  });
+
+  const linePath = points.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`).join(" ");
+  line.setAttribute("d", linePath);
+  area.setAttribute("d", `${linePath} L${width} ${height} L0 ${height} Z`);
+
+  // Color del trazo segun la tendencia del periodo mostrado.
+  const up = values[values.length - 1] >= values[0];
+  const hero = document.querySelector("#priceHero");
+  if (hero && document.querySelector("#priceChange24")?.textContent === "24h") {
+    hero.style.setProperty("--spark", up ? "#15d982" : "#ff4d6d");
+  }
 }
 
 async function fetchHolders() {
@@ -417,7 +481,7 @@ async function fetchBurned() {
 }
 
 function loadMarketData() {
-  Promise.allSettled([fetchDexData(), fetchHolders(), fetchBurned()]);
+  Promise.allSettled([fetchDexData(), fetchHolders(), fetchBurned(), fetchPriceChart()]);
 }
 
 /* ---------- Motor de swap (Uniswap v2 directo + MiniKit) ---------- */

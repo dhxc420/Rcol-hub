@@ -19,7 +19,7 @@
       })();
     </script>
     <link rel="stylesheet" href="./styles.css" />
-    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://unpkg.com/lucide@1.18.0" defer></script>
     <script type="module" src="./app.js"></script>
   </head>
   <body>
@@ -76,6 +76,26 @@
           <div class="section-heading">
             <span class="section-label">Mercado</span>
             <h2 id="marketTitle">RCOL en cifras</h2>
+          </div>
+          <div class="price-hero" id="priceHero">
+            <div class="price-hero__head">
+              <div>
+                <span class="stat-label">Precio RCOL</span>
+                <strong id="priceNow">—</strong>
+              </div>
+              <span class="price-change" id="priceChange24">24h</span>
+            </div>
+            <svg class="sparkline" id="sparkline" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--spark)" stop-opacity="0.32" />
+                  <stop offset="100%" stop-color="var(--spark)" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <path class="sparkline__area" id="sparkArea" d="" fill="url(#sparkFill)" />
+              <path class="sparkline__line" id="sparkLine" d="" fill="none" stroke="var(--spark)" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+            <span class="price-hero__caption" id="priceCaption">Ultimas 24h &middot; GeckoTerminal</span>
           </div>
           <div class="market-grid">
             <article class="stat-card">

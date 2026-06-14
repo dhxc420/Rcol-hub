@@ -475,6 +475,61 @@ html[data-theme="light"] .swap-fee {
   gap: 2px;
 }
 
+/* ---------- Price chart (sparkline) ---------- */
+
+.price-hero {
+  --spark: #15d982;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: var(--chip);
+}
+
+.price-hero__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.price-hero__head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--spark) 16%, transparent);
+  color: var(--spark);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sparkline {
+  width: 100%;
+  height: 56px;
+  display: block;
+  overflow: visible;
+}
+
+.price-hero__caption {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 /* ---------- Market stats ---------- */
 
 .market-grid {

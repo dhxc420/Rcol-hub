@@ -24,7 +24,13 @@ const SWAP_TOKENS = [
 
 // RCOL solo tiene liquidez contra WLD (pool Uniswap v2 en Worldchain).
 // Cualquier otro token se enruta a traves de WLD.
-const UNISWAP_V2_ROUTER = "0x541aB7c31A119441eF3575F6973277DE0eF460bd";
+const UNISWAP_V2_ROUTER = "0x541aB7c31A119441eF3575F6973277DE0eF460bd"; // solo para cotizar (getAmountsOut)
+// El swap se ejecuta via Permit2 + Universal Router: World App no permite el
+// approve de ERC20 directo (error disallowed_operation), pero si Permit2.
+const UNIVERSAL_ROUTER = "0x8ac7bee993bb44dab564ea4bc9ea67bf9eb5e743";
+const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+const V2_SWAP_EXACT_IN = "0x08"; // comando del Universal Router
+const UR_MSG_SENDER = "0x0000000000000000000000000000000000000001"; // constante: el destinatario es quien firma
 // RCOL cobra ~2% de impuesto en cada transferencia (token fee-on-transfer),
 // que getAmountsOut no refleja. El slippage debe cubrir ese impuesto + movimiento.
 const SWAP_SLIPPAGE_BPS = 400n; // 4.0%
@@ -486,29 +492,29 @@ function loadMarketData() {
 
 /* ---------- Motor de swap (Uniswap v2 directo + MiniKit) ---------- */
 
-const ERC20_APPROVE_ABI = [
+const PERMIT2_APPROVE_ABI = [
   {
     name: "approve",
     type: "function",
     stateMutability: "nonpayable",
     inputs: [
+      { name: "token", type: "address" },
       { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" }
+      { name: "amount", type: "uint160" },
+      { name: "expiration", type: "uint48" }
     ],
-    outputs: [{ name: "", type: "bool" }]
+    outputs: []
   }
 ];
 
-const V2_SWAP_ABI = [
+const UNIVERSAL_ROUTER_ABI = [
   {
-    name: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
+    name: "execute",
     type: "function",
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     inputs: [
-      { name: "amountIn", type: "uint256" },
-      { name: "amountOutMin", type: "uint256" },
-      { name: "path", type: "address[]" },
-      { name: "to", type: "address" },
+      { name: "commands", type: "bytes" },
+      { name: "inputs", type: "bytes[]" },
       { name: "deadline", type: "uint256" }
     ],
     outputs: []
@@ -516,7 +522,6 @@ const V2_SWAP_ABI = [
 ];
 
 const tokenBySymbol = Object.fromEntries(SWAP_TOKENS.map((token) => [token.symbol, token]));
-let cachedWalletAddress = null;
 let lastQuote = null;
 let quoteTimer = null;
 let quoteSeq = 0;
@@ -577,24 +582,17 @@ async function quoteAmountOut(amountInWei, path) {
   return BigInt("0x" + last);
 }
 
-async function getWalletAddress() {
-  if (cachedWalletAddress) return cachedWalletAddress;
-  const known = MiniKitApi?.user?.walletAddress;
-  if (known) {
-    cachedWalletAddress = known;
-    return known;
-  }
-  const nonce = (Math.random().toString(36) + Date.now().toString(36)).replace(/[^a-z0-9]/g, "").slice(0, 16);
-  const { finalPayload } = await MiniKitApi.commandsAsync.walletAuth({
-    nonce,
-    statement: "Conecta tu wallet para hacer swap en RCOL Hub",
-    expirationTime: new Date(Date.now() + 10 * 60 * 1000)
-  });
-  if (finalPayload?.status === "success" && finalPayload.address) {
-    cachedWalletAddress = finalPayload.address;
-    return finalPayload.address;
-  }
-  return null;
+// Codifica el input del comando V2_SWAP_EXACT_IN del Universal Router:
+// (address recipient, uint256 amountIn, uint256 amountOutMin, address[] path, bool payerIsUser)
+function encodeV2SwapInput(recipient, amountIn, minOut, path) {
+  const head =
+    pad32(recipient.slice(2)) +
+    pad32(amountIn.toString(16)) +
+    pad32(minOut.toString(16)) +
+    pad32("a0") +
+    pad32("1"); // payerIsUser = true: jala los tokens de quien firma via Permit2
+  const tail = pad32(path.length.toString(16)) + path.map((addr) => pad32(addr.slice(2))).join("");
+  return "0x" + head + tail;
 }
 
 /* ---------- Swap ---------- */
@@ -675,30 +673,24 @@ function setupSwap() {
         return;
       }
       const minOut = (amountOut * (10000n - SWAP_SLIPPAGE_BPS)) / 10000n;
-
-      setCta("Conectando wallet...", true);
-      const address = await getWalletAddress();
-      if (!address) {
-        showToast("No se pudo conectar la wallet");
-        return;
-      }
-
       const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
+      const swapInput = encodeV2SwapInput(UR_MSG_SENDER, amountInWei, minOut, path);
 
       setCta("Confirma en tu wallet...", true);
       const { finalPayload } = await MiniKitApi.commandsAsync.sendTransaction({
         transaction: [
           {
-            address: fromToken.address,
-            abi: ERC20_APPROVE_ABI,
+            // Autoriza al Universal Router en Permit2 (World App ya aprueba el token a Permit2).
+            address: PERMIT2,
+            abi: PERMIT2_APPROVE_ABI,
             functionName: "approve",
-            args: [UNISWAP_V2_ROUTER, amountInWei.toString()]
+            args: [fromToken.address, UNIVERSAL_ROUTER, amountInWei.toString(), deadline.toString()]
           },
           {
-            address: UNISWAP_V2_ROUTER,
-            abi: V2_SWAP_ABI,
-            functionName: "swapExactTokensForTokensSupportingFeeOnTransferTokens",
-            args: [amountInWei.toString(), minOut.toString(), path, address, deadline.toString()]
+            address: UNIVERSAL_ROUTER,
+            abi: UNIVERSAL_ROUTER_ABI,
+            functionName: "execute",
+            args: [V2_SWAP_EXACT_IN, [swapInput], deadline.toString()]
           }
         ]
       });

@@ -70,5 +70,38 @@
       "url": "https://t.me/updatesDzc",
       "icon": "send"
     }
-  ]
+  ],
+  "nft": {
+    "title": "RCOL Protocol Genesis",
+    "tagline": "NFT de utilidad",
+    "description": "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
+    "image": "./assets/nft-genesis.png",
+    "supply": 100,
+    "status": "coming_soon",
+    "ctaLabel": "Unirme a la lista",
+    "ctaUrl": "https://t.me/updatesDzc",
+    "contract": "",
+    "benefits": [
+      {
+        "icon": "gamepad-2",
+        "title": "Boost en los juegos",
+        "description": "Multiplicador de puntos y vidas extra en Vuela RCOL y los proximos juegos."
+      },
+      {
+        "icon": "badge-check",
+        "title": "Holder verificado",
+        "description": "Badge oficial en el hub que identifica tu wallet como holder Genesis."
+      },
+      {
+        "icon": "gift",
+        "title": "Airdrops y recompensas",
+        "description": "Reparto de RCOL, sorteos y recompensas periodicas solo para holders."
+      }
+    ],
+    "rarity": [
+      { "tier": "Legendaria", "range": "#001 - #010", "perk": "Boost x3 + airdrops dobles" },
+      { "tier": "Epica", "range": "#011 - #040", "perk": "Boost x2 + sorteos" },
+      { "tier": "Genesis", "range": "#041 - #100", "perk": "Boost x1.5 + badge" }
+    ]
+  }
 }

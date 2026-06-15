@@ -109,7 +109,41 @@ const fallbackConfig = {
       url: "https://t.me/updatesDzc",
       icon: "send"
     }
-  ]
+  ],
+  nft: {
+    title: "RCOL Protocol Genesis",
+    tagline: "NFT de utilidad",
+    description:
+      "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
+    image: "./assets/nft-genesis.png",
+    supply: 100,
+    status: "coming_soon",
+    ctaLabel: "Unirme a la lista",
+    ctaUrl: "https://t.me/updatesDzc",
+    contract: "",
+    benefits: [
+      {
+        icon: "gamepad-2",
+        title: "Boost en los juegos",
+        description: "Multiplicador de puntos y vidas extra en Vuela RCOL y los proximos juegos."
+      },
+      {
+        icon: "badge-check",
+        title: "Holder verificado",
+        description: "Badge oficial en el hub que identifica tu wallet como holder Genesis."
+      },
+      {
+        icon: "gift",
+        title: "Airdrops y recompensas",
+        description: "Reparto de RCOL, sorteos y recompensas periodicas solo para holders."
+      }
+    ],
+    rarity: [
+      { tier: "Legendaria", range: "#001 - #010", perk: "Boost x3 + airdrops dobles" },
+      { tier: "Epica", range: "#011 - #040", perk: "Boost x2 + sorteos" },
+      { tier: "Genesis", range: "#041 - #100", perk: "Boost x1.5 + badge" }
+    ]
+  }
 };
 
 let MiniKitApi = null;
@@ -257,7 +291,78 @@ function applyConfig(config) {
 
   renderLinks(config.links);
   renderCommunity(config.community || []);
+  renderNft(config.nft);
   window.lucide?.createIcons?.();
+}
+
+function renderNft(nft) {
+  const section = document.querySelector("#section-nft");
+  if (!section) return;
+  if (!nft) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+
+  section.querySelector("#nftTitle").textContent = nft.title || "NFT RCOL Genesis";
+  section.querySelector("#nftDesc").textContent = nft.description || "";
+
+  const image = section.querySelector("#nftImage");
+  if (nft.image) {
+    image.src = nft.image;
+    image.alt = nft.title || "NFT RCOL";
+    // Si la imagen final aun no esta subida, cae a la moneda RCOL.
+    image.onerror = () => {
+      image.onerror = null;
+      image.src = "./assets/rcol-coin.webp";
+    };
+  }
+
+  const isLive = nft.status === "live";
+  const statusBadge = section.querySelector("#nftStatus");
+  statusBadge.textContent = isLive ? "Disponible" : "Proximamente";
+  statusBadge.classList.toggle("is-live", isLive);
+
+  section.querySelector("#nftSupply").textContent = nft.supply
+    ? `Edicion limitada de ${nft.supply}`
+    : "Edicion limitada";
+
+  const benefits = section.querySelector("#nftBenefits");
+  benefits.innerHTML = (nft.benefits || [])
+    .map(
+      (benefit) => `
+        <li>
+          <span class="nft-benefit__icon"><i data-lucide="${escapeHtml(benefit.icon || "star")}" aria-hidden="true"></i></span>
+          <span>
+            <strong>${escapeHtml(benefit.title)}</strong>
+            <small>${escapeHtml(benefit.description)}</small>
+          </span>
+        </li>`
+    )
+    .join("");
+
+  const rarity = section.querySelector("#nftRarity");
+  rarity.innerHTML = (nft.rarity || [])
+    .map(
+      (item) => `
+        <div class="nft-tier">
+          <span class="nft-tier__name">${escapeHtml(item.tier)}</span>
+          <span class="nft-tier__range">${escapeHtml(item.range)}</span>
+          <span class="nft-tier__perk">${escapeHtml(item.perk)}</span>
+        </div>`
+    )
+    .join("");
+  rarity.parentElement.hidden = !(nft.rarity && nft.rarity.length);
+
+  const cta = section.querySelector("#nftCta");
+  cta.querySelector("span").textContent = nft.ctaLabel || (isLive ? "Conseguir NFT" : "Proximamente");
+  cta.onclick = () => {
+    if (nft.ctaUrl) {
+      window.open(nft.ctaUrl, "_blank", "noreferrer");
+    } else {
+      showToast("Muy pronto podras reclamar tu NFT Genesis");
+    }
+  };
 }
 
 async function copyToken(config) {

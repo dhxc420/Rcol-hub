@@ -408,9 +408,11 @@ function renderNft(nft) {
   section.querySelector("#nftDesc").textContent = nft.description || "";
 
   const isLive = nft.status === "live";
-  const statusBadge = section.querySelector("#nftStatus");
-  statusBadge.textContent = isLive ? "Disponible" : "Proximamente";
-  statusBadge.classList.toggle("is-live", isLive);
+  const statusBadge = document.querySelector("#nftStatus");
+  if (statusBadge) {
+    statusBadge.textContent = isLive ? "Disponible" : "Proximamente";
+    statusBadge.classList.toggle("is-live", isLive);
+  }
 
   section.querySelector("#nftSupply").textContent = nft.supply
     ? `Edicion limitada de ${nft.supply}`
@@ -995,11 +997,59 @@ function renderQuote(state) {
   toUsd.textContent = state.usd ? `≈ $${formatPrice(state.usd)} · on-chain` : "Precio on-chain Uniswap";
 }
 
+/* ---------- Vistas (hub / nft) ---------- */
+
+function setupViews() {
+  const hero = document.querySelector(".hero");
+  const hub = document.querySelector("#hubView");
+  const nftView = document.querySelector("#nftView");
+  const navLinks = Array.from(document.querySelectorAll(".bottom-nav a"));
+  if (!hub || !nftView) return;
+
+  const showView = (name) => {
+    const isNft = name === "nft";
+    if (hero) hero.hidden = isNft;
+    hub.hidden = isNft;
+    nftView.hidden = !isNft;
+    navLinks.forEach((a) => {
+      const href = a.getAttribute("href");
+      a.classList.toggle("is-active", isNft ? href === "#nft" : href === "#appTitle");
+    });
+    window.scrollTo({ top: 0 });
+    window.lucide?.createIcons?.();
+  };
+
+  const route = () => showView(location.hash === "#nft" ? "nft" : "hub");
+
+  window.addEventListener("hashchange", route);
+
+  // Los accesos del hub hacen scroll suave dentro de la vista hub.
+  navLinks.forEach((a) => {
+    const href = a.getAttribute("href");
+    if (href === "#nft") return; // lo maneja el router por el hash
+    a.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (location.hash === "#nft") history.replaceState(null, "", location.pathname + location.search);
+      showView("hub");
+      const target = document.querySelector(href);
+      if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
+    });
+  });
+
+  document.querySelector("#nftBack")?.addEventListener("click", () => {
+    history.replaceState(null, "", location.pathname + location.search);
+    showView("hub");
+  });
+
+  route();
+}
+
 /* ---------- Boot ---------- */
 
 async function boot() {
   setupTheme();
   setupSwap();
+  setupViews();
   loadMarketData();
 
   const [config, installResult] = await Promise.all([loadConfig(), loadMiniKit()]);

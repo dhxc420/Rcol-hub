@@ -60,7 +60,7 @@
         </section>
       </header>
 
-      <main>
+      <main id="hubView">
         <section class="spotlight" aria-label="Acciones principales">
           <a class="buy-card buy-card--gold" id="pufCta" href="https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4&path=/token/0x82bf7aa0680d9c2d6ffa77b995e2092fe68d308a" target="_blank" rel="noreferrer">
             <i data-lucide="coins" aria-hidden="true"></i>
@@ -156,28 +156,14 @@
           </div>
         </section>
 
-        <section class="panel nft-panel" id="section-nft" aria-labelledby="nftTitle">
-          <div class="section-heading nft-heading">
-            <div>
-              <span class="section-label">Coleccion</span>
-              <h2 id="nftTitle">NFT RCOL Genesis</h2>
-            </div>
-            <span class="nft-status" id="nftStatus">Proximamente</span>
-          </div>
-          <p class="nft-desc" id="nftDesc"></p>
-          <p class="nft-supply" id="nftSupply"></p>
-          <div class="nft-gallery" id="nftGallery"></div>
-          <span class="stat-label nft-sub">Beneficios de cada Genesis</span>
-          <ul class="nft-benefits" id="nftBenefits"></ul>
-          <div class="nft-rarity">
-            <span class="stat-label">Beneficios por rareza</span>
-            <div class="nft-rarity__list" id="nftRarity"></div>
-          </div>
-          <button class="nft-cta" id="nftCta" type="button">
-            <i data-lucide="sparkles" aria-hidden="true"></i>
-            <span>Proximamente</span>
-          </button>
-        </section>
+        <a class="nft-teaser" href="#nft" aria-label="Ver coleccion NFT RCOL Genesis">
+          <span class="nft-teaser__icon"><i data-lucide="gem" aria-hidden="true"></i></span>
+          <span class="nft-teaser__body">
+            <strong>NFT RCOL Genesis</strong>
+            <small>Coleccion de 100 &middot; utilidad en los juegos</small>
+          </span>
+          <i data-lucide="chevron-right" aria-hidden="true"></i>
+        </a>
 
         <section class="banner-card" aria-label="RCOL identidad">
           <img src="./assets/rcol-banner-mobile.webp" alt="RCOL nuestra identidad, nuestro respaldo" />
@@ -221,11 +207,43 @@
 
       </main>
 
+      <main class="nft-view" id="nftView" hidden>
+        <div class="view-topbar">
+          <button class="round-button" id="nftBack" type="button" aria-label="Volver al inicio">
+            <i data-lucide="arrow-left" aria-hidden="true"></i>
+          </button>
+          <strong>NFT RCOL Genesis</strong>
+          <span class="nft-status" id="nftStatus">Proximamente</span>
+        </div>
+
+        <section class="panel nft-panel" id="section-nft" aria-labelledby="nftTitle">
+          <div class="nft-heading">
+            <div>
+              <span class="section-label">Coleccion</span>
+              <h2 id="nftTitle">NFT RCOL Genesis</h2>
+            </div>
+          </div>
+          <p class="nft-desc" id="nftDesc"></p>
+          <p class="nft-supply" id="nftSupply"></p>
+          <div class="nft-gallery" id="nftGallery"></div>
+          <span class="stat-label nft-sub">Beneficios de cada Genesis</span>
+          <ul class="nft-benefits" id="nftBenefits"></ul>
+          <div class="nft-rarity">
+            <span class="stat-label">Beneficios por rareza</span>
+            <div class="nft-rarity__list" id="nftRarity"></div>
+          </div>
+          <button class="nft-cta" id="nftCta" type="button">
+            <i data-lucide="sparkles" aria-hidden="true"></i>
+            <span>Proximamente</span>
+          </button>
+        </section>
+      </main>
+
       <nav class="bottom-nav" aria-label="Navegacion principal">
         <a href="#appTitle" aria-label="Inicio"><i data-lucide="home" aria-hidden="true"></i></a>
         <a href="#section-market" aria-label="Mercado"><i data-lucide="chart-line" aria-hidden="true"></i></a>
         <a href="#section-swap" aria-label="Swap"><i data-lucide="arrow-left-right" aria-hidden="true"></i></a>
-        <a href="#section-nft" aria-label="NFT"><i data-lucide="gem" aria-hidden="true"></i></a>
+        <a href="#nft" aria-label="NFT"><i data-lucide="gem" aria-hidden="true"></i></a>
         <a href="#linksTitle" aria-label="Accesos"><i data-lucide="grid-2x2" aria-hidden="true"></i></a>
         <a href="#section-community" aria-label="Comunidad"><i data-lucide="users" aria-hidden="true"></i></a>
       </nav>

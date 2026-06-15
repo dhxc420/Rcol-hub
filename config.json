@@ -102,6 +102,18 @@
       { "tier": "Legendaria", "range": "#001 - #010", "perk": "Boost x3 + airdrops dobles" },
       { "tier": "Epica", "range": "#011 - #040", "perk": "Boost x2 + sorteos" },
       { "tier": "Genesis", "range": "#041 - #100", "perk": "Boost x1.5 + badge" }
+    ],
+    "items": [
+      { "edition": "001", "name": "Genesis #001", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
+      { "edition": "002", "name": "Genesis #002", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
+      { "edition": "003", "name": "Genesis #003", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
+      { "edition": "012", "name": "Genesis #012", "tier": "Epica", "perk": "Boost x2", "image": "" },
+      { "edition": "021", "name": "Genesis #021", "tier": "Epica", "perk": "Boost x2", "image": "" },
+      { "edition": "034", "name": "Genesis #034", "tier": "Epica", "perk": "Boost x2", "image": "" },
+      { "edition": "047", "name": "Genesis #047", "tier": "Genesis", "perk": "Boost x1.5", "image": "" },
+      { "edition": "063", "name": "Genesis #063", "tier": "Genesis", "perk": "Boost x1.5", "image": "" },
+      { "edition": "088", "name": "Genesis #088", "tier": "Genesis", "perk": "Boost x1.5", "image": "" },
+      { "edition": "100", "name": "Genesis #100", "tier": "Genesis", "perk": "Boost x1.5", "image": "" }
     ]
   }
 }

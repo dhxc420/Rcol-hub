@@ -142,9 +142,109 @@ const fallbackConfig = {
       { tier: "Legendaria", range: "#001 - #010", perk: "Boost x3 + airdrops dobles" },
       { tier: "Epica", range: "#011 - #040", perk: "Boost x2 + sorteos" },
       { tier: "Genesis", range: "#041 - #100", perk: "Boost x1.5 + badge" }
+    ],
+    items: [
+      { edition: "001", name: "Genesis #001", tier: "Legendaria", perk: "Boost x3", image: "" },
+      { edition: "002", name: "Genesis #002", tier: "Legendaria", perk: "Boost x3", image: "" },
+      { edition: "003", name: "Genesis #003", tier: "Legendaria", perk: "Boost x3", image: "" },
+      { edition: "012", name: "Genesis #012", tier: "Epica", perk: "Boost x2", image: "" },
+      { edition: "021", name: "Genesis #021", tier: "Epica", perk: "Boost x2", image: "" },
+      { edition: "034", name: "Genesis #034", tier: "Epica", perk: "Boost x2", image: "" },
+      { edition: "047", name: "Genesis #047", tier: "Genesis", perk: "Boost x1.5", image: "" },
+      { edition: "063", name: "Genesis #063", tier: "Genesis", perk: "Boost x1.5", image: "" },
+      { edition: "088", name: "Genesis #088", tier: "Genesis", perk: "Boost x1.5", image: "" },
+      { edition: "100", name: "Genesis #100", tier: "Genesis", perk: "Boost x1.5", image: "" }
     ]
   }
 };
+
+// Paleta por rareza para el arte generado.
+const NFT_TIER_COLORS = {
+  Legendaria: { base: "#f8d66d", light: "#fff4cf" },
+  Epica: { base: "#b06bff", light: "#e7d2ff" },
+  Genesis: { base: "#18e0a0", light: "#bcffe9" }
+};
+
+// Arte de mariposa-cristal generado por SVG (placeholder hasta que haya imagen real).
+function generateNftArt(seed, tier) {
+  const color = NFT_TIER_COLORS[tier] || NFT_TIER_COLORS.Genesis;
+  const g = `n${seed}`;
+  // PRNG simple para variar destellos por edicion.
+  let s = seed * 9301 + 49297;
+  const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  const sparkles = Array.from({ length: 4 }, () => {
+    const x = (8 + rnd() * 48).toFixed(1);
+    const y = (8 + rnd() * 48).toFixed(1);
+    const r = (0.6 + rnd() * 1.1).toFixed(1);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${(0.4 + rnd() * 0.5).toFixed(2)}"/>`;
+  }).join("");
+
+  const wingUpper = "M32 30 C40 11 56 12 59 24 C60 33 47 35 32 33 Z";
+  const wingLower = "M32 35 C45 36 55 45 50 55 C45 61 35 57 32 44 Z";
+  const facets = `<path d="M32 31 L57 21 M32 33 L52 31 M32 38 L49 51 M32 40 L44 44" stroke="rgba(255,255,255,0.4)" stroke-width="0.4" fill="none"/>`;
+
+  return `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="bg${g}" cx="50%" cy="40%" r="80%">
+          <stop offset="0%" stop-color="${color.base}" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#0a0805"/>
+        </radialGradient>
+        <linearGradient id="w${g}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${color.light}"/>
+          <stop offset="100%" stop-color="${color.base}"/>
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" fill="url(#bg${g})"/>
+      ${sparkles}
+      <g filter="drop-shadow(0 0 3px ${color.base})">
+        <g fill="url(#w${g})" stroke="rgba(255,255,255,0.5)" stroke-width="0.5">
+          <path d="${wingUpper}"/>
+          <path d="${wingLower}"/>
+        </g>
+        <g fill="url(#w${g})" stroke="rgba(255,255,255,0.5)" stroke-width="0.5" transform="translate(64,0) scale(-1,1)">
+          <path d="${wingUpper}"/>
+          <path d="${wingLower}"/>
+        </g>
+        ${facets}
+        <g transform="translate(64,0) scale(-1,1)">${facets}</g>
+        <ellipse cx="32" cy="35" rx="1.5" ry="9" fill="#0d0a06" stroke="${color.base}" stroke-width="0.4"/>
+        <path d="M32 26 q-4 -5 -7 -7 M32 26 q4 -5 7 -7" stroke="${color.base}" stroke-width="0.6" fill="none"/>
+      </g>
+    </svg>`;
+}
+
+function renderNftGallery(items) {
+  const grid = document.querySelector("#nftGallery");
+  if (!grid) return;
+  const list = items || [];
+  grid.innerHTML = list
+    .map((item, i) => {
+      const tierColor = NFT_TIER_COLORS[item.tier] || NFT_TIER_COLORS.Genesis;
+      const art = item.image
+        ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />`
+        : generateNftArt(i + 1, item.tier);
+      return `
+        <button class="nft-item" type="button" style="--tc:${tierColor.base}">
+          <span class="nft-item__art">${art}</span>
+          <span class="nft-item__meta">
+            <span class="nft-item__row">
+              <span class="nft-item__edition">#${escapeHtml(item.edition)}</span>
+              <span class="nft-item__tier">${escapeHtml(item.tier)}</span>
+            </span>
+            <span class="nft-item__perk">${escapeHtml(item.perk)}</span>
+          </span>
+        </button>`;
+    })
+    .join("");
+
+  grid.querySelectorAll(".nft-item").forEach((el, i) => {
+    const item = list[i];
+    el.addEventListener("click", () =>
+      showToast(`${item.name} - ${item.tier} - Proximamente`)
+    );
+  });
+}
 
 let MiniKitApi = null;
 let activeConfig = null;
@@ -307,17 +407,6 @@ function renderNft(nft) {
   section.querySelector("#nftTitle").textContent = nft.title || "NFT RCOL Genesis";
   section.querySelector("#nftDesc").textContent = nft.description || "";
 
-  const image = section.querySelector("#nftImage");
-  if (nft.image) {
-    image.src = nft.image;
-    image.alt = nft.title || "NFT RCOL";
-    // Si la imagen final aun no esta subida, cae a la moneda RCOL.
-    image.onerror = () => {
-      image.onerror = null;
-      image.src = "./assets/rcol-coin.webp";
-    };
-  }
-
   const isLive = nft.status === "live";
   const statusBadge = section.querySelector("#nftStatus");
   statusBadge.textContent = isLive ? "Disponible" : "Proximamente";
@@ -326,6 +415,8 @@ function renderNft(nft) {
   section.querySelector("#nftSupply").textContent = nft.supply
     ? `Edicion limitada de ${nft.supply}`
     : "Edicion limitada";
+
+  renderNftGallery(nft.items);
 
   const benefits = section.querySelector("#nftBenefits");
   benefits.innerHTML = (nft.benefits || [])

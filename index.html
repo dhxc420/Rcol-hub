@@ -225,6 +225,7 @@
           </div>
           <p class="nft-desc" id="nftDesc"></p>
           <p class="nft-supply" id="nftSupply"></p>
+          <div class="nft-filters" id="nftFilters" role="tablist" aria-label="Filtrar por rareza"></div>
           <div class="nft-gallery" id="nftGallery"></div>
           <span class="stat-label nft-sub">Beneficios de cada Genesis</span>
           <ul class="nft-benefits" id="nftBenefits"></ul>
@@ -250,5 +251,24 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="nft-modal" id="nftModal" hidden role="dialog" aria-modal="true" aria-labelledby="nftModalName">
+      <div class="nft-modal__backdrop" data-close></div>
+      <div class="nft-modal__card">
+        <button class="nft-modal__close" id="nftModalClose" type="button" data-close aria-label="Cerrar">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+        <div class="nft-modal__art" id="nftModalArt"></div>
+        <div class="nft-modal__head">
+          <h3 id="nftModalName">Genesis</h3>
+          <span class="nft-modal__tier" id="nftModalTier"></span>
+        </div>
+        <p class="nft-modal__edition" id="nftModalEdition"></p>
+        <div class="nft-modal__perk" id="nftModalPerk"></div>
+        <span class="stat-label">Beneficios del holder</span>
+        <ul class="nft-modal__benefits" id="nftModalBenefits"></ul>
+        <span class="nft-modal__note" id="nftModalNote">Proximamente disponible</span>
+      </div>
+    </div>
   </body>
 </html>

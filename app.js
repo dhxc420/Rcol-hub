@@ -214,19 +214,50 @@ function generateNftArt(seed, tier) {
     </svg>`;
 }
 
-function renderNftGallery(items) {
+let nftConfig = null;
+let nftFilter = "Todas";
+
+// Arte de un item: imagen real si la hay, si no la mariposa generada (seed por edicion = estable).
+function nftItemArt(item) {
+  if (item.image) return `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />`;
+  return generateNftArt(parseInt(item.edition, 10) || 1, item.tier);
+}
+
+function renderNftFilters() {
+  const wrap = document.querySelector("#nftFilters");
+  if (!wrap) return;
+  const tiers = [...new Set((nftConfig?.items || []).map((item) => item.tier))];
+  const filters = ["Todas", ...tiers];
+  if (!filters.includes(nftFilter)) nftFilter = "Todas";
+
+  wrap.innerHTML = filters
+    .map(
+      (filter) =>
+        `<button class="nft-filter${filter === nftFilter ? " is-active" : ""}" type="button" data-filter="${escapeHtml(filter)}">${escapeHtml(filter)}</button>`
+    )
+    .join("");
+
+  wrap.querySelectorAll(".nft-filter").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      nftFilter = btn.dataset.filter;
+      wrap.querySelectorAll(".nft-filter").forEach((b) => b.classList.toggle("is-active", b === btn));
+      renderNftGallery();
+    });
+  });
+}
+
+function renderNftGallery() {
   const grid = document.querySelector("#nftGallery");
   if (!grid) return;
-  const list = items || [];
+  const all = nftConfig?.items || [];
+  const list = nftFilter === "Todas" ? all : all.filter((item) => item.tier === nftFilter);
+
   grid.innerHTML = list
-    .map((item, i) => {
+    .map((item) => {
       const tierColor = NFT_TIER_COLORS[item.tier] || NFT_TIER_COLORS.Genesis;
-      const art = item.image
-        ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />`
-        : generateNftArt(i + 1, item.tier);
       return `
         <button class="nft-item" type="button" style="--tc:${tierColor.base}">
-          <span class="nft-item__art">${art}</span>
+          <span class="nft-item__art">${nftItemArt(item)}</span>
           <span class="nft-item__meta">
             <span class="nft-item__row">
               <span class="nft-item__edition">#${escapeHtml(item.edition)}</span>
@@ -239,10 +270,50 @@ function renderNftGallery(items) {
     .join("");
 
   grid.querySelectorAll(".nft-item").forEach((el, i) => {
-    const item = list[i];
-    el.addEventListener("click", () =>
-      showToast(`${item.name} - ${item.tier} - Proximamente`)
-    );
+    el.addEventListener("click", () => openNftModal(list[i]));
+  });
+  window.lucide?.createIcons?.();
+}
+
+function openNftModal(item) {
+  const modal = document.querySelector("#nftModal");
+  if (!modal || !item) return;
+  const tierColor = NFT_TIER_COLORS[item.tier] || NFT_TIER_COLORS.Genesis;
+
+  modal.style.setProperty("--tc", tierColor.base);
+  modal.querySelector("#nftModalArt").innerHTML = nftItemArt(item);
+  modal.querySelector("#nftModalName").textContent = item.name || `Genesis #${item.edition}`;
+  const tierEl = modal.querySelector("#nftModalTier");
+  tierEl.textContent = item.tier;
+  modal.querySelector("#nftModalEdition").textContent = `Edicion ${item.edition} de ${nftConfig?.supply || 100}`;
+  modal.querySelector("#nftModalPerk").innerHTML = `<i data-lucide="zap" aria-hidden="true"></i> ${escapeHtml(item.perk)}`;
+  modal.querySelector("#nftModalBenefits").innerHTML = (nftConfig?.benefits || [])
+    .map(
+      (benefit) =>
+        `<li><i data-lucide="${escapeHtml(benefit.icon || "star")}" aria-hidden="true"></i><span>${escapeHtml(benefit.title)}</span></li>`
+    )
+    .join("");
+  modal.querySelector("#nftModalNote").textContent =
+    nftConfig?.status === "live" ? "Disponible para mintear" : "Proximamente disponible";
+
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+  window.lucide?.createIcons?.();
+}
+
+function closeNftModal() {
+  const modal = document.querySelector("#nftModal");
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function setupNftModal() {
+  const modal = document.querySelector("#nftModal");
+  if (!modal) return;
+  modal.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeNftModal));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeNftModal();
   });
 }
 
@@ -418,7 +489,9 @@ function renderNft(nft) {
     ? `Edicion limitada de ${nft.supply}`
     : "Edicion limitada";
 
-  renderNftGallery(nft.items);
+  nftConfig = nft;
+  renderNftFilters();
+  renderNftGallery();
 
   const benefits = section.querySelector("#nftBenefits");
   benefits.innerHTML = (nft.benefits || [])
@@ -1050,6 +1123,7 @@ async function boot() {
   setupTheme();
   setupSwap();
   setupViews();
+  setupNftModal();
   loadMarketData();
 
   const [config, installResult] = await Promise.all([loadConfig(), loadMiniKit()]);

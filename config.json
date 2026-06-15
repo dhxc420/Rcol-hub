@@ -105,7 +105,7 @@
     ],
     "items": [
       { "edition": "001", "name": "Genesis #001", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
-      { "edition": "002", "name": "Genesis #002", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
+      { "edition": "002", "name": "Genesis #002", "tier": "Legendaria", "perk": "Boost x3", "image": "./assets/nft-genesis.png" },
       { "edition": "003", "name": "Genesis #003", "tier": "Legendaria", "perk": "Boost x3", "image": "" },
       { "edition": "012", "name": "Genesis #012", "tier": "Epica", "perk": "Boost x2", "image": "" },
       { "edition": "021", "name": "Genesis #021", "tier": "Epica", "perk": "Boost x2", "image": "" },

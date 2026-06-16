@@ -216,6 +216,7 @@ function generateNftArt(seed, tier) {
 
 let nftConfig = null;
 let nftFilter = "Todas";
+let currentNftItem = null;
 
 // Arte de un item: imagen real si la hay, si no la mariposa generada (seed por edicion = estable).
 function nftItemArt(item) {
@@ -278,6 +279,7 @@ function renderNftGallery() {
 function openNftModal(item) {
   const modal = document.querySelector("#nftModal");
   if (!modal || !item) return;
+  currentNftItem = item;
   const tierColor = NFT_TIER_COLORS[item.tier] || NFT_TIER_COLORS.Genesis;
 
   modal.style.setProperty("--tc", tierColor.base);
@@ -315,6 +317,67 @@ function setupNftModal() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !modal.hidden) closeNftModal();
   });
+  document.querySelector("#nftModalShare")?.addEventListener("click", () => shareNft(currentNftItem));
+}
+
+// Genera un archivo de imagen del NFT (imagen real o el SVG rasterizado).
+async function nftImageFile(item, name) {
+  const artEl = document.querySelector("#nftModalArt");
+  if (!artEl) return null;
+  const imgEl = artEl.querySelector("img");
+  if (imgEl) {
+    const response = await fetch(imgEl.src);
+    const blob = await response.blob();
+    return new File([blob], `${name}.png`, { type: blob.type || "image/png" });
+  }
+  const svg = artEl.querySelector("svg");
+  if (!svg) return null;
+  const xml = new XMLSerializer().serializeToString(svg);
+  const dataUri = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  const image = new Image();
+  image.src = dataUri;
+  await image.decode();
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  canvas.getContext("2d").drawImage(image, 0, 0, size, size);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  return blob ? new File([blob], `${name}.png`, { type: "image/png" }) : null;
+}
+
+async function shareNft(item) {
+  if (!item) return;
+  const url = `${location.origin}${location.pathname}#nft`;
+  const title = `RCOL Genesis #${item.edition}`;
+  const text = `Mira el NFT ${title} (${item.tier}) - ${item.perk} en los juegos RCOL. ${url}`;
+
+  // 1) Intentar compartir la imagen del NFT (si el dispositivo lo soporta).
+  try {
+    const file = await nftImageFile(item, title);
+    if (file && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title, text: `${title} (${item.tier}) - ${item.perk}` });
+      return;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return; // el usuario cancelo
+  }
+
+  // 2) Compartir link (MiniKit / nativo / portapapeles).
+  try {
+    if (MiniKitApi?.share) {
+      await MiniKitApi.share({ title, text, url });
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title, text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    showToast("Link del NFT copiado");
+  } catch (error) {
+    if (error?.name !== "AbortError") showToast("No se pudo compartir ahora");
+  }
 }
 
 let MiniKitApi = null;
@@ -1114,7 +1177,41 @@ function setupViews() {
     showView("hub");
   });
 
+  setupScrollSpy(navLinks, nftView);
   route();
+}
+
+// Resalta en el nav la seccion del hub que esta en pantalla.
+function setupScrollSpy(navLinks, nftView) {
+  if (!("IntersectionObserver" in window)) return;
+  const map = [
+    [".hero", "#appTitle"],
+    ["#section-market", "#section-market"],
+    ["#section-swap", "#section-swap"],
+    [".link-section", "#linksTitle"],
+    ["#section-community", "#section-community"]
+  ];
+  const targets = map
+    .map(([selector, href]) => ({ el: document.querySelector(selector), href }))
+    .filter((target) => target.el);
+  if (!targets.length) return;
+
+  const setActive = (href) => {
+    if (!nftView.hidden) return; // en la vista NFT manda la gema
+    navLinks.forEach((a) => a.classList.toggle("is-active", a.getAttribute("href") === href));
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const target = targets.find((t) => t.el === entry.target);
+        if (target) setActive(target.href);
+      });
+    },
+    { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
+  );
+  targets.forEach((target) => observer.observe(target.el));
 }
 
 /* ---------- Boot ---------- */

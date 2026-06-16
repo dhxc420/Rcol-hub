@@ -1543,8 +1543,34 @@ html[data-theme="light"] .nft-modal__card {
   flex-shrink: 0;
 }
 
+.nft-modal__share {
+  min-height: 46px;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--tc, #f8d66d) 45%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tc, #f8d66d) 14%, transparent);
+  color: var(--tc, #f8d66d);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.nft-modal__share:active {
+  transform: scale(0.97);
+}
+
+.nft-modal__share svg {
+  width: 17px;
+  height: 17px;
+}
+
 .nft-modal__note {
-  margin-top: 2px;
+  margin-top: 0;
   text-align: center;
   color: var(--muted);
   font-size: 0.76rem;

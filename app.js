@@ -592,6 +592,42 @@ function renderAnnouncements(items) {
   carousel.querySelectorAll("[data-soon]").forEach((el) =>
     el.addEventListener("click", () => showToast("Muy pronto disponible"))
   );
+
+  startAnnouncementsAutoplay(carousel);
+}
+
+// El carrusel avanza solo; se pausa al interactuar o cuando no esta visible.
+function startAnnouncementsAutoplay(carousel) {
+  const cards = carousel.querySelectorAll(".ann-card");
+  if (cards.length < 2) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+  let paused = false;
+  let resumeTimer = null;
+
+  setInterval(() => {
+    if (paused || carousel.offsetParent === null) return; // pausado o vista oculta
+    const gap = parseFloat(getComputedStyle(carousel).gap) || 10;
+    const step = cards[0].getBoundingClientRect().width + gap;
+    const max = carousel.scrollWidth - carousel.clientWidth;
+    // Avanza una tarjeta; muestra la ultima antes de volver al inicio.
+    const next = carousel.scrollLeft >= max - 4 ? 0 : Math.min(carousel.scrollLeft + step, max);
+    carousel.scrollTo({ left: next, behavior: "smooth" });
+  }, 4000);
+
+  const pause = () => {
+    paused = true;
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => {
+      paused = false;
+    }, 6000);
+  };
+  ["pointerdown", "touchstart", "wheel"].forEach((event) =>
+    carousel.addEventListener(event, pause, { passive: true })
+  );
+  document.addEventListener("visibilitychange", () => {
+    paused = document.hidden;
+  });
 }
 
 function renderNft(nft) {

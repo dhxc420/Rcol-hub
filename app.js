@@ -417,7 +417,7 @@ async function loadMiniKit() {
     const looksLikeWorldApp = Boolean(window.WorldApp) || /WorldApp|MiniKit/i.test(navigator.userAgent);
     if (!looksLikeWorldApp) return { success: false };
 
-    const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.11.0/+esm");
+    const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@2.0.3/+esm");
     MiniKitApi = mod.MiniKit;
     return MiniKitApi?.install?.();
   } catch {
@@ -960,34 +960,9 @@ function loadMarketData() {
 
 /* ---------- Motor de swap (Uniswap v2 directo + MiniKit) ---------- */
 
-const PERMIT2_APPROVE_ABI = [
-  {
-    name: "approve",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "token", type: "address" },
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint160" },
-      { name: "expiration", type: "uint48" }
-    ],
-    outputs: []
-  }
-];
-
-const UNIVERSAL_ROUTER_ABI = [
-  {
-    name: "execute",
-    type: "function",
-    stateMutability: "payable",
-    inputs: [
-      { name: "commands", type: "bytes" },
-      { name: "inputs", type: "bytes[]" },
-      { name: "deadline", type: "uint256" }
-    ],
-    outputs: []
-  }
-];
+// MiniKit v2 exige calldata pre-codificado ({ to, data }). Codificamos a mano.
+const PERMIT2_APPROVE_SELECTOR = "87517c45"; // approve(address,address,uint160,uint48)
+const UR_EXECUTE_SELECTOR = "3593564c"; // execute(bytes,bytes[],uint256)
 
 const tokenBySymbol = Object.fromEntries(SWAP_TOKENS.map((token) => [token.symbol, token]));
 let lastQuote = null;
@@ -1061,6 +1036,37 @@ function encodeV2SwapInput(recipient, amountIn, minOut, path) {
     pad32("1"); // payerIsUser = true: jala los tokens de quien firma via Permit2
   const tail = pad32(path.length.toString(16)) + path.map((addr) => pad32(addr.slice(2))).join("");
   return "0x" + head + tail;
+}
+
+// Calldata de Permit2.approve(token, spender, amount uint160, expiration uint48).
+function encodePermit2Approve(token, spender, amount, expiration) {
+  return (
+    "0x" +
+    PERMIT2_APPROVE_SELECTOR +
+    pad32(token.slice(2)) +
+    pad32(spender.slice(2)) +
+    pad32(amount.toString(16)) +
+    pad32(expiration.toString(16))
+  );
+}
+
+// Empaqueta unos bytes dinamicos: longitud (32) + datos rellenados a multiplo de 32.
+function encodeDynBytes(hexNoPrefix) {
+  const lenWord = pad32((hexNoPrefix.length / 2).toString(16));
+  const padded = hexNoPrefix + "0".repeat((64 - (hexNoPrefix.length % 64)) % 64);
+  return lenWord + padded;
+}
+
+// Calldata de UniversalRouter.execute(bytes commands, bytes[] inputs, uint256 deadline).
+function encodeUniversalRouterExecute(commandHex, inputHex, deadline) {
+  const commandsTail = encodeDynBytes(commandHex.replace(/^0x/, ""));
+  const inputElem = encodeDynBytes(inputHex.replace(/^0x/, ""));
+  const offCommands = 0x60;
+  const offInputs = offCommands + commandsTail.length / 2;
+  // inputs (bytes[]): longitud del arreglo + offset al primer elemento + elemento.
+  const inputsTail = pad32("1") + pad32("20") + inputElem;
+  const head = pad32(offCommands.toString(16)) + pad32(offInputs.toString(16)) + pad32(deadline.toString(16));
+  return "0x" + UR_EXECUTE_SELECTOR + head + commandsTail + inputsTail;
 }
 
 /* ---------- Swap ---------- */
@@ -1144,42 +1150,33 @@ function setupSwap() {
       const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
       const swapInput = encodeV2SwapInput(UR_MSG_SENDER, amountInWei, minOut, path);
 
+      // MiniKit v2: calldata pre-codificado, transactions (plural), expiration 0 en Permit2.approve.
+      const approveData = encodePermit2Approve(fromToken.address, UNIVERSAL_ROUTER, amountInWei, 0n);
+      const executeData = encodeUniversalRouterExecute(V2_SWAP_EXACT_IN, swapInput, deadline);
+
       setCta("Confirma en tu wallet...", true);
-      const { finalPayload } = await MiniKitApi.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            // Autoriza al Universal Router en Permit2 (World App ya aprueba el token a Permit2).
-            // Expiration = 0: la doc de World exige 0 porque se consume en la misma transaccion.
-            address: PERMIT2,
-            abi: PERMIT2_APPROVE_ABI,
-            functionName: "approve",
-            args: [fromToken.address, UNIVERSAL_ROUTER, amountInWei.toString(), "0"]
-          },
-          {
-            address: UNIVERSAL_ROUTER,
-            abi: UNIVERSAL_ROUTER_ABI,
-            functionName: "execute",
-            args: [V2_SWAP_EXACT_IN, [swapInput], deadline.toString()]
-          }
+      const result = await MiniKitApi.sendTransaction({
+        chainId: 480,
+        transactions: [
+          { to: PERMIT2, data: approveData },
+          { to: UNIVERSAL_ROUTER, data: executeData }
         ]
       });
 
-      console.log("RCOL swap sendTransaction result:", finalPayload);
-      if (finalPayload?.status === "success") {
-        showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
-        amountInput.value = "";
-        renderQuote(null);
-        setTimeout(loadMarketData, 12000);
-      } else if (finalPayload?.error_code === "user_rejected") {
-        showToast("Swap cancelado");
-      } else {
-        const code = finalPayload?.error_code || "error";
-        const detail = finalPayload?.details ? ` - ${JSON.stringify(finalPayload.details)}` : "";
-        showToast(`Swap fallo: ${code}${detail}`);
-      }
+      // v2 resuelve con los datos en exito y LANZA en error (lo captura el catch).
+      console.log("RCOL swap result:", result);
+      showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
+      amountInput.value = "";
+      renderQuote(null);
+      setTimeout(loadMarketData, 12000);
     } catch (error) {
       console.error("Swap error:", error);
-      showToast(`Error: ${error?.message || error}`);
+      const message = error?.message || error?.error_code || String(error);
+      if (/reject|cancel|denied/i.test(message)) {
+        showToast("Swap cancelado");
+      } else {
+        showToast(`Swap fallo: ${message}`);
+      }
     } finally {
       setCta("Swap ahora", false);
     }

@@ -1149,10 +1149,11 @@ function setupSwap() {
         transaction: [
           {
             // Autoriza al Universal Router en Permit2 (World App ya aprueba el token a Permit2).
+            // Expiration = 0: la doc de World exige 0 porque se consume en la misma transaccion.
             address: PERMIT2,
             abi: PERMIT2_APPROVE_ABI,
             functionName: "approve",
-            args: [fromToken.address, UNIVERSAL_ROUTER, amountInWei.toString(), deadline.toString()]
+            args: [fromToken.address, UNIVERSAL_ROUTER, amountInWei.toString(), "0"]
           },
           {
             address: UNIVERSAL_ROUTER,
@@ -1163,6 +1164,7 @@ function setupSwap() {
         ]
       });
 
+      console.log("RCOL swap sendTransaction result:", finalPayload);
       if (finalPayload?.status === "success") {
         showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
         amountInput.value = "";
@@ -1171,11 +1173,13 @@ function setupSwap() {
       } else if (finalPayload?.error_code === "user_rejected") {
         showToast("Swap cancelado");
       } else {
-        showToast(`No se completo el swap (${finalPayload?.error_code || "error"})`);
+        const code = finalPayload?.error_code || "error";
+        const detail = finalPayload?.details ? ` - ${JSON.stringify(finalPayload.details)}` : "";
+        showToast(`Swap fallo: ${code}${detail}`);
       }
     } catch (error) {
       console.error("Swap error:", error);
-      showToast("No se pudo completar el swap, intenta de nuevo");
+      showToast(`Error: ${error?.message || error}`);
     } finally {
       setCta("Swap ahora", false);
     }

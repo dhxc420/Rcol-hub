@@ -444,6 +444,133 @@ html[data-theme="light"] .swap-fee {
   height: 15px;
 }
 
+/* ---------- Anuncios (carrusel) ---------- */
+
+.ann-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 2px 0 4px;
+  margin: 0 -2px;
+  scrollbar-width: none;
+}
+
+.ann-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.ann-card {
+  scroll-snap-align: start;
+  flex: 0 0 86%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 78px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 18px;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    var(--card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  transition: transform 120ms ease;
+}
+
+.ann-card:active {
+  transform: scale(0.98);
+}
+
+.ann-card.has-image {
+  padding: 0;
+  min-height: 110px;
+}
+
+.ann-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.ann-card.has-image .ann-card__body {
+  position: relative;
+  z-index: 1;
+  align-self: flex-end;
+  margin: 12px 14px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(8, 7, 4, 0.55);
+  backdrop-filter: blur(8px);
+  color: #fff;
+}
+
+.ann-card.has-image .ann-card__go {
+  position: relative;
+  z-index: 1;
+  margin: 0 12px 0 auto;
+  color: #fff;
+}
+
+.ann-card__icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 22%, rgba(0, 0, 0, 0.3));
+  color: var(--accent);
+}
+
+.ann-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ann-card__body strong {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ann-card__body small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.ann-card.has-image .ann-card__body small {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ann-card__go {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+/* ---------- Reveal al hacer scroll ---------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
 .banner-card {
   overflow: hidden;
 }
@@ -855,6 +982,52 @@ html[data-theme="light"] .swap-fee {
 
 .nft-sub {
   margin-top: 4px;
+}
+
+/* Progreso de acuñacion */
+.nft-progress {
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip);
+}
+
+.nft-progress__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nft-progress__pct {
+  color: var(--gold);
+}
+
+.nft-progress__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+
+.nft-progress__bar > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b87803, var(--gold));
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nft-progress .nft-supply {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 /* Filtros por rareza */

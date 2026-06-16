@@ -72,6 +72,10 @@
           </a>
         </section>
 
+        <section class="ann-section" aria-label="Anuncios RCOL">
+          <div class="ann-carousel" id="annCarousel"></div>
+        </section>
+
         <section class="panel market-panel" id="section-market" aria-labelledby="marketTitle">
           <div class="section-heading">
             <span class="section-label">Mercado</span>
@@ -224,7 +228,14 @@
             </div>
           </div>
           <p class="nft-desc" id="nftDesc"></p>
-          <p class="nft-supply" id="nftSupply"></p>
+          <div class="nft-progress">
+            <div class="nft-progress__head">
+              <span id="nftMintedLabel">0 / 100 acunados</span>
+              <span class="nft-progress__pct" id="nftMintedPct">0%</span>
+            </div>
+            <div class="nft-progress__bar"><span id="nftMintedFill"></span></div>
+            <p class="nft-supply" id="nftSupply"></p>
+          </div>
           <div class="nft-filters" id="nftFilters" role="tablist" aria-label="Filtrar por rareza"></div>
           <div class="nft-gallery" id="nftGallery"></div>
           <span class="stat-label nft-sub">Beneficios de cada Genesis</span>

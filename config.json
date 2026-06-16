@@ -71,12 +71,39 @@
       "icon": "send"
     }
   ],
+  "announcements": [
+    {
+      "title": "Vuela RCOL",
+      "subtitle": "Juega ahora en World App",
+      "icon": "gamepad-2",
+      "accent": "#facc15",
+      "image": "",
+      "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
+    },
+    {
+      "title": "Flappy Butterfly",
+      "subtitle": "El nuevo juego RCOL",
+      "icon": "bird",
+      "accent": "#18e0a0",
+      "image": "",
+      "url": ""
+    },
+    {
+      "title": "Siguenos en X",
+      "subtitle": "@Rcol_Oficial",
+      "icon": "x",
+      "accent": "#ffffff",
+      "image": "",
+      "url": "https://x.com/Rcol_Oficial"
+    }
+  ],
   "nft": {
     "title": "RCOL Protocol Genesis",
     "tagline": "NFT de utilidad",
     "description": "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
     "image": "./assets/nft-genesis.png",
     "supply": 100,
+    "minted": 0,
     "status": "coming_soon",
     "ctaLabel": "Unirme a la lista",
     "ctaUrl": "https://t.me/updatesDzc",

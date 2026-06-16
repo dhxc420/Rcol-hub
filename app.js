@@ -110,6 +110,32 @@ const fallbackConfig = {
       icon: "send"
     }
   ],
+  announcements: [
+    {
+      title: "Vuela RCOL",
+      subtitle: "Juega ahora en World App",
+      icon: "gamepad-2",
+      accent: "#facc15",
+      image: "",
+      url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
+    },
+    {
+      title: "Flappy Butterfly",
+      subtitle: "El nuevo juego RCOL",
+      icon: "bird",
+      accent: "#18e0a0",
+      image: "",
+      url: ""
+    },
+    {
+      title: "Siguenos en X",
+      subtitle: "@Rcol_Oficial",
+      icon: "x",
+      accent: "#ffffff",
+      image: "",
+      url: "https://x.com/Rcol_Oficial"
+    }
+  ],
   nft: {
     title: "RCOL Protocol Genesis",
     tagline: "NFT de utilidad",
@@ -117,6 +143,7 @@ const fallbackConfig = {
       "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
     image: "./assets/nft-genesis.png",
     supply: 100,
+    minted: 0,
     status: "coming_soon",
     ctaLabel: "Unirme a la lista",
     ctaUrl: "https://t.me/updatesDzc",
@@ -523,10 +550,48 @@ function applyConfig(config) {
   const puf = config.links.find((link) => link.id === "puf");
   if (puf && !isPlaceholder(puf.url)) document.querySelector("#pufCta").href = puf.url;
 
+  renderAnnouncements(config.announcements || []);
   renderLinks(config.links);
   renderCommunity(config.community || []);
   renderNft(config.nft);
   window.lucide?.createIcons?.();
+}
+
+function renderAnnouncements(items) {
+  const carousel = document.querySelector("#annCarousel");
+  if (!carousel) return;
+  const section = carousel.closest(".ann-section");
+  if (!items.length) {
+    if (section) section.hidden = true;
+    return;
+  }
+  if (section) section.hidden = false;
+
+  carousel.innerHTML = items
+    .map((item) => {
+      const accent = item.accent || "#f8d66d";
+      const tag = item.url ? "a" : "button";
+      const hasImage = Boolean(item.image);
+      const media = hasImage
+        ? `<img class="ann-card__img" src="${escapeHtml(item.image)}" alt="" loading="lazy" />`
+        : `<span class="ann-card__icon"><i data-lucide="${escapeHtml(item.icon || "megaphone")}" aria-hidden="true"></i></span>`;
+      return `
+        <${tag} class="ann-card${hasImage ? " has-image" : ""}" style="--accent:${accent}"${
+        item.url ? ` href="${encodeURI(item.url)}" target="_blank" rel="noreferrer"` : ' type="button" data-soon="1"'
+      }>
+          ${media}
+          <span class="ann-card__body">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.subtitle || "")}</small>
+          </span>
+          <i data-lucide="${item.url ? "arrow-up-right" : "clock"}" class="ann-card__go" aria-hidden="true"></i>
+        </${tag}>`;
+    })
+    .join("");
+
+  carousel.querySelectorAll("[data-soon]").forEach((el) =>
+    el.addEventListener("click", () => showToast("Muy pronto disponible"))
+  );
 }
 
 function renderNft(nft) {
@@ -551,6 +616,16 @@ function renderNft(nft) {
   section.querySelector("#nftSupply").textContent = nft.supply
     ? `Edicion limitada de ${nft.supply}`
     : "Edicion limitada";
+
+  // Progreso de acuñacion (placeholder desde config hasta que exista el contrato).
+  const supply = Number(nft.supply) || 100;
+  const minted = Math.max(0, Math.min(supply, Number(nft.minted) || 0));
+  const pct = Math.round((minted / supply) * 100);
+  document.querySelector("#nftMintedLabel").textContent = `${minted} / ${supply} acunados`;
+  document.querySelector("#nftMintedPct").textContent = `${pct}%`;
+  requestAnimationFrame(() => {
+    document.querySelector("#nftMintedFill").style.width = `${pct}%`;
+  });
 
   nftConfig = nft;
   renderNftFilters();
@@ -603,26 +678,49 @@ async function copyToken(config) {
   }
 }
 
+// Rasteriza una imagen (mismo origen) a PNG para compartirla como archivo.
+async function urlToImageFile(url, name) {
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || 1200;
+  canvas.height = image.naturalHeight || 400;
+  canvas.getContext("2d").drawImage(image, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  return blob ? new File([blob], `${name}.png`, { type: "image/png" }) : null;
+}
+
 async function shareApp(config) {
   const website = config.links.find((link) => link.id === "website");
   const shareUrl = website?.url || location.href;
   const text = `${config.brand}: ${config.tagline}`;
 
+  // 1) Compartir con imagen (banner) si el dispositivo lo soporta.
+  try {
+    const file = await urlToImageFile("./assets/rcol-banner-mobile.webp", "rcol-hub");
+    if (file && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: config.brand, text: `${text} ${shareUrl}` });
+      return;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+  }
+
+  // 2) Compartir link (MiniKit / nativo / portapapeles).
   try {
     if (MiniKitApi?.share) {
       await MiniKitApi.share({ title: config.brand, text, url: shareUrl });
       return;
     }
-
     if (navigator.share) {
       await navigator.share({ title: config.brand, text, url: shareUrl });
       return;
     }
-
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(`${text} ${shareUrl}`);
     showToast("Link copiado para compartir");
-  } catch {
-    showToast("No se pudo compartir ahora");
+  } catch (error) {
+    if (error?.name !== "AbortError") showToast("No se pudo compartir ahora");
   }
 }
 
@@ -1181,6 +1279,31 @@ function setupViews() {
   route();
 }
 
+// Microanimaciones de entrada de las tarjetas del hub al hacer scroll.
+function setupReveal() {
+  const hub = document.querySelector("#hubView");
+  if (!hub) return;
+  const items = Array.from(hub.children);
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) return;
+
+  items.forEach((el) => el.classList.add("reveal"));
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.04 }
+  );
+  items.forEach((el) => observer.observe(el));
+  // Failsafe: si algo no dispara, mostrar todo.
+  setTimeout(() => items.forEach((el) => el.classList.add("is-visible")), 1400);
+}
+
 // Resalta en el nav la seccion del hub que esta en pantalla.
 function setupScrollSpy(navLinks, nftView) {
   if (!("IntersectionObserver" in window)) return;
@@ -1221,6 +1344,7 @@ async function boot() {
   setupSwap();
   setupViews();
   setupNftModal();
+  setupReveal();
   loadMarketData();
 
   const [config, installResult] = await Promise.all([loadConfig(), loadMiniKit()]);

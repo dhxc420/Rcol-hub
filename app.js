@@ -789,25 +789,28 @@ function renderWallet() {
     nameEl.textContent = "Conectar";
     button.setAttribute("aria-label", "Conectar wallet");
   }
+  // El boton de swap refleja si hay que conectar primero (capa de seguridad).
+  const cta = document.querySelector("#swapCta");
+  if (cta && !cta.disabled) {
+    cta.querySelector("span").textContent = walletState ? "Swap ahora" : "Conecta tu wallet";
+  }
 }
 
 async function connectWallet() {
-  if (walletState) return;
+  if (walletState) return true;
   if (!worldAppReady || !MiniKitApi) {
     showToast("Abre el hub en World App para conectar");
-    return;
+    return false;
   }
-  const nonce = (Math.random().toString(36) + Date.now().toString(36)).replace(/[^a-z0-9]/g, "").slice(0, 16);
+  // nonce: >= 8 caracteres alfanumericos (lo exige MiniKit v2).
+  const nonce = (Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/gi, "").slice(0, 24);
   try {
-    const res = await MiniKitApi.walletAuth({
-      nonce,
-      statement: "Conecta tu wallet en RCOL Hub",
-      expirationTime: new Date(Date.now() + 10 * 60 * 1000)
-    });
+    const res = await MiniKitApi.walletAuth({ nonce, statement: "Conecta tu wallet en RCOL Hub" });
+    console.log("walletAuth result:", res);
+    // v2 resuelve con { address, ... } y lanza en error. Soportamos ambas formas.
     const payload = res?.finalPayload || res;
-    if (payload?.status && payload.status !== "success") throw new Error(payload.error_code || "auth");
     const address = payload?.address || MiniKitApi.user?.walletAddress;
-    if (!address) throw new Error("sin direccion");
+    if (!address) throw new Error(payload?.error_code || payload?.status || "sin direccion");
 
     let username = MiniKitApi.user?.username;
     if (!username) {
@@ -820,9 +823,13 @@ async function connectWallet() {
     renderWallet();
     updateSwapBalance();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
+    return true;
   } catch (error) {
-    const message = error?.message || String(error);
-    if (!/reject|cancel|denied/i.test(message)) showToast("No se pudo conectar la wallet");
+    console.error("walletAuth error:", error);
+    const message = error?.message || error?.error_code || String(error);
+    if (/reject|cancel|denied/i.test(message)) showToast("Conexion cancelada");
+    else showToast(`No se pudo conectar: ${message}`);
+    return false;
   }
 }
 
@@ -1224,15 +1231,21 @@ function setupSwap() {
     const toSym = toSelect.value;
     const amount = parseFloat(amountInput.value);
 
-    if (!(amount > 0)) {
-      showToast("Ingresa una cantidad para cambiar");
-      amountInput.focus();
-      return;
-    }
-
     if (!worldAppReady || !MiniKitApi) {
       showToast("Abre el hub en World App para firmar el swap");
       openPufFallback();
+      return;
+    }
+
+    // Capa de seguridad: exige conectar la wallet antes de poder swappear.
+    if (!walletState) {
+      const connected = await connectWallet();
+      if (!connected) return;
+    }
+
+    if (!(amount > 0)) {
+      showToast("Ingresa una cantidad para cambiar");
+      amountInput.focus();
       return;
     }
 
@@ -1280,7 +1293,7 @@ function setupSwap() {
         showToast(`Swap fallo: ${message}`);
       }
     } finally {
-      setCta("Swap ahora", false);
+      setCta(walletState ? "Swap ahora" : "Conecta tu wallet", false);
     }
   });
 

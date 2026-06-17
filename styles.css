@@ -46,6 +46,10 @@ html[data-theme="light"] {
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -1948,6 +1952,219 @@ svg {
   height: 20px;
 }
 
+/* ---------- Vista Swap separada ---------- */
+
+.swap-view {
+  display: grid;
+  gap: 14px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  animation: viewIn 240ms ease;
+}
+
+.swap-view__price {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.swap-wallet-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, #ff1476 35%, var(--line));
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 20, 118, 0.12), rgba(179, 0, 255, 0.08) 60%, transparent),
+    var(--panel);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+}
+
+.swap-wallet-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.swap-wallet-card__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.swap-wallet-card__user span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swap-wallet-connect {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f8d66d, #b87803);
+  color: #171005;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.swap-wallet-connect:active {
+  transform: scale(0.95);
+}
+
+.swap-balances {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.swap-balances[hidden] {
+  display: none;
+}
+
+.swap-balance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 0.78rem;
+}
+
+.swap-balance-pill__sym {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.swap-balance-pill__val {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.swap-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.swap-rate-row[hidden] {
+  display: none;
+}
+
+.swap-last-tx {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip);
+}
+
+.swap-last-tx[hidden] {
+  display: none;
+}
+
+.swap-last-tx__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold);
+  font-size: 0.88rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.swap-last-tx__link span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Teaser del swap en la vista hub */
+.swap-teaser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, #ff1476 35%, var(--line));
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 20, 118, 0.14), rgba(179, 0, 255, 0.1) 60%, transparent),
+    var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+  transition: transform 120ms ease;
+}
+
+.swap-teaser:active {
+  transform: scale(0.98);
+}
+
+.swap-teaser__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 20, 118, 0.28), rgba(179, 0, 255, 0.22));
+  color: #ff1476;
+}
+
+.swap-teaser__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.swap-teaser__body strong {
+  display: block;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.swap-teaser__body small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.swap-teaser > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
 .link-card__chevron svg,
 svg.link-card__chevron {
   width: 17px;
@@ -2100,11 +2317,17 @@ svg.link-card__chevron {
     max-width: 100%;
   }
 
+  .nft-view,
+  .swap-view {
+    grid-template-columns: 1fr;
+  }
+
   .spotlight,
   .banner-card,
   .link-section,
   .market-panel,
-  .swap-panel {
+  .swap-panel,
+  .swap-teaser {
     grid-column: span 2;
     width: 100%;
     max-width: 100%;

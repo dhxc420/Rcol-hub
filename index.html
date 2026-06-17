@@ -70,7 +70,7 @@
             <i data-lucide="coins" aria-hidden="true"></i>
             <span>Comprar en PUF</span>
           </a>
-          <a class="buy-card buy-card--pink" id="swapShortcut" href="#section-swap">
+          <a class="buy-card buy-card--pink" id="swapShortcut" href="#swap">
             <i data-lucide="arrow-left-right" aria-hidden="true"></i>
             <span>Swap RCOL</span>
           </a>
@@ -130,44 +130,14 @@
           <p class="panel-note">Datos en vivo de DexScreener y Worldchain</p>
         </section>
 
-        <section class="panel swap-panel" id="section-swap" aria-labelledby="swapTitle">
-          <div class="section-heading">
-            <span class="section-label">Swap</span>
-            <h2 id="swapTitle">Cambia tokens por RCOL</h2>
-          </div>
-          <div class="swap-box">
-            <div class="swap-field">
-              <div class="swap-field__head">
-                <label for="swapAmount">Pagas</label>
-                <button class="swap-bal" id="swapMax" type="button" hidden>
-                  Saldo: <span id="swapBalanceVal">0</span> &middot; MAX
-                </button>
-              </div>
-              <div class="swap-row">
-                <input id="swapAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
-                <select class="token-select" id="swapFrom" aria-label="Token que pagas"></select>
-              </div>
-              <small id="swapFromUsd">&nbsp;</small>
-            </div>
-            <button class="swap-invert" id="swapInvert" type="button" aria-label="Invertir tokens">
-              <i data-lucide="arrow-down-up" aria-hidden="true"></i>
-            </button>
-            <div class="swap-field">
-              <label for="swapTo">Recibes (estimado)</label>
-              <div class="swap-row">
-                <output id="swapOut" for="swapAmount">0.0</output>
-                <select class="token-select" id="swapTo" aria-label="Token que recibes"></select>
-              </div>
-              <small id="swapToUsd">&nbsp;</small>
-            </div>
-            <button class="swap-cta" id="swapCta" type="button">
-              <i data-lucide="repeat" aria-hidden="true"></i>
-              <span>Swap ahora</span>
-            </button>
-            <p class="swap-fee"><i data-lucide="badge-check" aria-hidden="true"></i> 0% de comision del hub &middot; solo red y pool</p>
-            <p class="panel-note">RCOL cobra ~2% de impuesto por transferencia, asi que recibes un poco menos. El swap se firma directo con tu wallet de World App.</p>
-          </div>
-        </section>
+        <a class="swap-teaser" href="#swap" aria-label="Ir a Swap RCOL">
+          <span class="swap-teaser__icon"><i data-lucide="arrow-left-right" aria-hidden="true"></i></span>
+          <span class="swap-teaser__body">
+            <strong>Swap RCOL</strong>
+            <small id="swapTeaserRate">Toca para cambiar tokens</small>
+          </span>
+          <i data-lucide="chevron-right" aria-hidden="true"></i>
+        </a>
 
         <a class="nft-teaser" href="#nft" aria-label="Ver coleccion NFT RCOL Genesis">
           <span class="nft-teaser__icon"><i data-lucide="gem" aria-hidden="true"></i></span>
@@ -260,10 +230,79 @@
         </section>
       </main>
 
+      <main class="swap-view" id="swapView" hidden>
+        <div class="view-topbar">
+          <button class="round-button" id="swapBack" type="button" aria-label="Volver al inicio">
+            <i data-lucide="arrow-left" aria-hidden="true"></i>
+          </button>
+          <strong>Swap RCOL</strong>
+          <span class="swap-view__price" id="swapPricePill">—</span>
+        </div>
+
+        <div class="swap-wallet-card" id="swapWalletCard">
+          <div class="swap-wallet-card__head">
+            <div class="swap-wallet-card__user">
+              <i data-lucide="wallet" aria-hidden="true"></i>
+              <span id="swapWalletLabel">Conecta tu wallet para ver saldos</span>
+            </div>
+            <button class="swap-wallet-connect" id="swapConnectBtn" type="button">Conectar</button>
+          </div>
+          <div class="swap-balances" id="swapBalances" hidden></div>
+        </div>
+
+        <div class="panel swap-panel" id="section-swap">
+          <div class="swap-box">
+            <div class="swap-field">
+              <div class="swap-field__head">
+                <label for="swapAmount">Pagas</label>
+                <button class="swap-bal" id="swapMax" type="button" hidden>
+                  Saldo: <span id="swapBalanceVal">0</span> &middot; MAX
+                </button>
+              </div>
+              <div class="swap-row">
+                <input id="swapAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
+                <select class="token-select" id="swapFrom" aria-label="Token que pagas"></select>
+              </div>
+              <small id="swapFromUsd">&nbsp;</small>
+            </div>
+            <button class="swap-invert" id="swapInvert" type="button" aria-label="Invertir tokens">
+              <i data-lucide="arrow-down-up" aria-hidden="true"></i>
+            </button>
+            <div class="swap-field">
+              <label for="swapTo">Recibes (estimado)</label>
+              <div class="swap-row">
+                <output id="swapOut" for="swapAmount">0.0</output>
+                <select class="token-select" id="swapTo" aria-label="Token que recibes"></select>
+              </div>
+              <small id="swapToUsd">&nbsp;</small>
+            </div>
+            <button class="swap-cta" id="swapCta" type="button">
+              <i data-lucide="repeat" aria-hidden="true"></i>
+              <span>Conecta tu wallet</span>
+            </button>
+            <p class="swap-fee"><i data-lucide="badge-check" aria-hidden="true"></i> 0% de comision del hub &middot; solo red y pool</p>
+            <p class="panel-note">RCOL cobra ~2% de impuesto por transferencia, asi que recibes un poco menos. El swap se firma directo con tu wallet de World App.</p>
+          </div>
+        </div>
+
+        <div class="swap-rate-row" id="swapRate" hidden>
+          <i data-lucide="refresh-cw" aria-hidden="true"></i>
+          <span id="swapRateText">—</span>
+        </div>
+
+        <div class="swap-last-tx" id="swapLastTx" hidden>
+          <span class="stat-label">Ultimo swap</span>
+          <a class="swap-last-tx__link" id="swapLastTxLink" href="#" target="_blank" rel="noreferrer">
+            <span id="swapLastTxText">—</span>
+            <i data-lucide="external-link" aria-hidden="true"></i>
+          </a>
+        </div>
+      </main>
+
       <nav class="bottom-nav" aria-label="Navegacion principal">
         <a href="#appTitle" aria-label="Inicio"><i data-lucide="home" aria-hidden="true"></i></a>
         <a href="#section-market" aria-label="Mercado"><i data-lucide="chart-line" aria-hidden="true"></i></a>
-        <a href="#section-swap" aria-label="Swap"><i data-lucide="arrow-left-right" aria-hidden="true"></i></a>
+        <a href="#swap" aria-label="Swap"><i data-lucide="arrow-left-right" aria-hidden="true"></i></a>
         <a href="#nft" aria-label="NFT"><i data-lucide="gem" aria-hidden="true"></i></a>
         <a href="#linksTitle" aria-label="Accesos"><i data-lucide="grid-2x2" aria-hidden="true"></i></a>
         <a href="#section-community" aria-label="Comunidad"><i data-lucide="users" aria-hidden="true"></i></a>

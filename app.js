@@ -898,6 +898,7 @@ async function connectWallet() {
     walletState = { address, username };
     renderWallet();
     updateSwapBalance();
+    if (!document.querySelector("#swapView")?.hidden) renderSwapView();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
     return true;
   } catch (error) {
@@ -941,6 +942,7 @@ async function updateSwapBalance() {
 
 function setupWallet() {
   document.querySelector("#walletButton")?.addEventListener("click", connectWallet);
+  document.querySelector("#swapConnectBtn")?.addEventListener("click", connectWallet);
   document.querySelector("#swapMax")?.addEventListener("click", () => {
     if (!walletState || !(Number(walletBalanceStr) > 0)) return;
     const input = document.querySelector("#swapAmount");
@@ -1355,9 +1357,13 @@ function setupSwap() {
 
       // v2 resuelve con los datos en exito y LANZA en error (lo captura el catch).
       console.log("RCOL swap result:", result);
+      const outNum = Number(fromBaseUnits(amountOut, tokenBySymbol[toSym].decimals));
+      const txHash = result?.transaction_id || result?.transactionId || result?.hash || null;
+      saveLastTx(fromSym, toSym, amount, outNum, txHash);
       showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
       amountInput.value = "";
       renderQuote(null);
+      renderLastTx();
       setTimeout(loadMarketData, 12000);
       setTimeout(updateSwapBalance, 12000);
     } catch (error) {
@@ -1373,6 +1379,8 @@ function setupSwap() {
     }
   });
 
+  updateSwapTeaser();
+  refreshSwapRate();
   scheduleQuote();
 }
 
@@ -1457,41 +1465,183 @@ function renderQuote(state) {
   const fromUsdValue = tokenPrices[state.fromSym] ? state.amount * tokenPrices[state.fromSym] : null;
   fromUsd.textContent = fromUsdValue ? `≈ $${formatPrice(fromUsdValue)}` : " ";
   toUsd.textContent = state.usd ? `≈ $${formatPrice(state.usd)} · on-chain` : "Precio on-chain Uniswap";
+  // Actualizar pill de precio con la cotizacion on-chain (WLD→RCOL es la mas precisa).
+  if (state.amount > 0 && state.fromSym === "WLD" && state.toSym === "RCOL") {
+    const rate = state.outNum / state.amount;
+    const rateLabel = `1 WLD ≈ ${formatTokenAmount(rate)} RCOL`;
+    setSwapRate(rateLabel, `≈ ${abbreviate(rate)} RCOL/WLD`);
+    const teaserEl = document.querySelector("#swapTeaserRate");
+    if (teaserEl) teaserEl.textContent = rateLabel;
+  }
 }
 
-/* ---------- Vistas (hub / nft) ---------- */
+/* ---------- Vista Swap ---------- */
+
+const LAST_TX_KEY = "rcol-last-swap";
+
+function saveLastTx(fromSym, toSym, amount, outNum, txHash) {
+  const text = `${formatTokenAmount(amount)} ${fromSym} → ${formatTokenAmount(outNum)} ${toSym}`;
+  try {
+    localStorage.setItem(LAST_TX_KEY, JSON.stringify({ text, hash: txHash, time: Date.now() }));
+  } catch {}
+}
+
+function renderLastTx() {
+  const card = document.querySelector("#swapLastTx");
+  const link = document.querySelector("#swapLastTxLink");
+  const textEl = document.querySelector("#swapLastTxText");
+  if (!card || !link || !textEl) return;
+  try {
+    const raw = localStorage.getItem(LAST_TX_KEY);
+    if (!raw) { card.hidden = true; return; }
+    const tx = JSON.parse(raw);
+    if (!tx?.text) { card.hidden = true; return; }
+    textEl.textContent = tx.text;
+    link.href = tx.hash
+      ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${tx.hash}`
+      : "#";
+    card.hidden = false;
+  } catch {
+    card.hidden = true;
+  }
+}
+
+function updateSwapTeaser() {
+  const el = document.querySelector("#swapTeaserRate");
+  if (!el) return;
+  if (tokenPrices.WLD > 0 && tokenPrices.RCOL > 0) {
+    const rate = tokenPrices.WLD / tokenPrices.RCOL;
+    el.textContent = `1 WLD ≈ ${formatTokenAmount(rate)} RCOL`;
+  } else if (tokenPrices.RCOL > 0) {
+    el.textContent = `1 RCOL ≈ $${formatPrice(tokenPrices.RCOL)}`;
+  }
+}
+
+async function refreshSwapRate() {
+  try {
+    const path = buildPath("WLD", "RCOL");
+    const amountIn = toBaseUnits("1", tokenBySymbol["WLD"].decimals);
+    const amountOut = await quoteAmountOut(amountIn, path);
+    if (!amountOut || amountOut === 0n) return;
+    const outNum = Number(fromBaseUnits(amountOut, tokenBySymbol["RCOL"].decimals));
+    const rateLabel = `1 WLD ≈ ${formatTokenAmount(outNum)} RCOL`;
+    const shortLabel = `≈ ${abbreviate(outNum)} RCOL/WLD`;
+    setSwapRate(rateLabel, shortLabel);
+    const teaserEl = document.querySelector("#swapTeaserRate");
+    if (teaserEl) teaserEl.textContent = rateLabel;
+  } catch {}
+}
+
+async function fetchAllBalances() {
+  const container = document.querySelector("#swapBalances");
+  if (!container || !walletState) return;
+  container.hidden = false;
+  container.innerHTML = SWAP_TOKENS.map(
+    (token) =>
+      `<span class="swap-balance-pill" data-sym="${escapeHtml(token.symbol)}">
+        <span class="swap-balance-pill__sym">${escapeHtml(token.symbol)}</span>
+        <span class="swap-balance-pill__val">...</span>
+      </span>`
+  ).join("");
+
+  const results = await Promise.allSettled(
+    SWAP_TOKENS.map((token) => getTokenBalanceRaw(token.address, walletState.address))
+  );
+  results.forEach((result, i) => {
+    const token = SWAP_TOKENS[i];
+    const pill = container.querySelector(`[data-sym="${token.symbol}"] .swap-balance-pill__val`);
+    if (!pill) return;
+    if (result.status === "fulfilled") {
+      pill.textContent = formatTokenAmount(Number(fromBaseUnits(result.value, token.decimals)));
+    } else {
+      pill.textContent = "—";
+    }
+  });
+}
+
+function setSwapRate(rateText, shortText) {
+  const pill = document.querySelector("#swapPricePill");
+  const row = document.querySelector("#swapRate");
+  const rowText = document.querySelector("#swapRateText");
+  if (pill && rateText) pill.textContent = shortText || rateText;
+  if (row && rowText && rateText) { rowText.textContent = `${rateText} · Uniswap v2`; row.hidden = false; }
+}
+
+function renderSwapView() {
+  // Precio / tasa usando precios DexScreener o RCOL price como fallback
+  if (tokenPrices.WLD > 0 && tokenPrices.RCOL > 0) {
+    const rate = tokenPrices.WLD / tokenPrices.RCOL;
+    setSwapRate(`1 WLD ≈ ${formatTokenAmount(rate)} RCOL`, `≈ ${abbreviate(rate)} RCOL/WLD`);
+  } else if (tokenPrices.RCOL > 0) {
+    setSwapRate(`1 RCOL ≈ $${formatPrice(tokenPrices.RCOL)}`, `$${formatPrice(tokenPrices.RCOL)}`);
+  }
+
+  // Wallet card
+  const walletLabel = document.querySelector("#swapWalletLabel");
+  const connectBtn = document.querySelector("#swapConnectBtn");
+  const balancesEl = document.querySelector("#swapBalances");
+  if (walletState) {
+    if (walletLabel) walletLabel.textContent = walletState.username ? `@${walletState.username}` : shortAddress(walletState.address);
+    if (connectBtn) connectBtn.hidden = true;
+    fetchAllBalances();
+  } else {
+    if (walletLabel) walletLabel.textContent = "Conecta tu wallet para ver saldos";
+    if (connectBtn) connectBtn.hidden = false;
+    if (balancesEl) { balancesEl.innerHTML = ""; balancesEl.hidden = true; }
+  }
+
+  renderLastTx();
+  refreshSwapRate();
+  scheduleQuote();
+}
+
+/* ---------- Vistas (hub / nft / swap) ---------- */
 
 function setupViews() {
   const hero = document.querySelector(".hero");
   const hub = document.querySelector("#hubView");
   const nftView = document.querySelector("#nftView");
+  const swapView = document.querySelector("#swapView");
   const navLinks = Array.from(document.querySelectorAll(".bottom-nav a"));
   if (!hub || !nftView) return;
 
   const showView = (name) => {
     const isNft = name === "nft";
-    if (hero) hero.hidden = isNft;
-    hub.hidden = isNft;
+    const isSwap = name === "swap";
+    const isHub = !isNft && !isSwap;
+    if (hero) hero.hidden = !isHub;
+    hub.hidden = !isHub;
     nftView.hidden = !isNft;
+    if (swapView) swapView.hidden = !isSwap;
     navLinks.forEach((a) => {
       const href = a.getAttribute("href");
-      a.classList.toggle("is-active", isNft ? href === "#nft" : href === "#appTitle");
+      a.classList.toggle(
+        "is-active",
+        isNft ? href === "#nft" : isSwap ? href === "#swap" : href === "#appTitle"
+      );
     });
     window.scrollTo({ top: 0 });
     window.lucide?.createIcons?.();
+    if (isSwap) renderSwapView();
   };
 
-  const route = () => showView(location.hash === "#nft" ? "nft" : "hub");
+  const route = () => {
+    const hash = location.hash;
+    if (hash === "#nft") showView("nft");
+    else if (hash === "#swap") showView("swap");
+    else showView("hub");
+  };
 
   window.addEventListener("hashchange", route);
 
-  // Los accesos del hub hacen scroll suave dentro de la vista hub.
   navLinks.forEach((a) => {
     const href = a.getAttribute("href");
-    if (href === "#nft") return; // lo maneja el router por el hash
+    if (href === "#nft" || href === "#swap") return;
     a.addEventListener("click", (event) => {
       event.preventDefault();
-      if (location.hash === "#nft") history.replaceState(null, "", location.pathname + location.search);
+      if (location.hash === "#nft" || location.hash === "#swap") {
+        history.replaceState(null, "", location.pathname + location.search);
+      }
       showView("hub");
       const target = document.querySelector(href);
       if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -1503,7 +1653,12 @@ function setupViews() {
     showView("hub");
   });
 
-  setupScrollSpy(navLinks, nftView);
+  document.querySelector("#swapBack")?.addEventListener("click", () => {
+    history.replaceState(null, "", location.pathname + location.search);
+    showView("hub");
+  });
+
+  setupScrollSpy(navLinks, nftView, swapView);
   route();
 }
 
@@ -1533,12 +1688,11 @@ function setupReveal() {
 }
 
 // Resalta en el nav la seccion del hub que esta en pantalla.
-function setupScrollSpy(navLinks, nftView) {
+function setupScrollSpy(navLinks, nftView, swapView) {
   if (!("IntersectionObserver" in window)) return;
   const map = [
     [".hero", "#appTitle"],
     ["#section-market", "#section-market"],
-    ["#section-swap", "#section-swap"],
     [".link-section", "#linksTitle"],
     ["#section-community", "#section-community"]
   ];
@@ -1548,7 +1702,7 @@ function setupScrollSpy(navLinks, nftView) {
   if (!targets.length) return;
 
   const setActive = (href) => {
-    if (!nftView.hidden) return; // en la vista NFT manda la gema
+    if (!nftView.hidden || (swapView && !swapView.hidden)) return;
     navLinks.forEach((a) => a.classList.toggle("is-active", a.getAttribute("href") === href));
   };
 

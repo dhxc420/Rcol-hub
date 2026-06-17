@@ -74,7 +74,7 @@ const fallbackConfig = {
           url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
           icon: "./assets/vuela-rcol.png",
           isImage: true,
-          status: "verified"
+          status: "reviewing"
         },
         {
           title: "Flappy Butterfly",

@@ -882,11 +882,11 @@ async function connectWallet() {
   const nonce = (Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/gi, "").slice(0, 24);
   try {
     const res = await MiniKitApi.walletAuth({ nonce, statement: "Conecta tu wallet en RCOL Hub" });
-    console.log("walletAuth result:", res);
-    // v2 resuelve con { address, ... } y lanza en error. Soportamos ambas formas.
-    const payload = res?.finalPayload || res;
-    const address = payload?.address || MiniKitApi.user?.walletAddress;
-    if (!address) throw new Error(payload?.error_code || payload?.status || "sin direccion");
+    console.log("walletAuth result:", JSON.stringify(res));
+    // v2 envuelve: { executedWith:"minikit", data:{address,message,signature,version} }
+    const data = res?.data || res?.finalPayload || res;
+    const address = data?.address || MiniKitApi.user?.walletAddress;
+    if (!address) throw new Error(JSON.stringify(data) || "sin direccion");
 
     let username = MiniKitApi.user?.username;
     if (!username) {

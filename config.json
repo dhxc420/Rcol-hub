@@ -24,14 +24,30 @@
       "accent": "#ffffff"
     },
     {
-      "id": "game",
-      "title": "Vuela RCOL",
-      "description": "En World App",
-      "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
-      "icon": "./assets/vuela-rcol.png",
-      "isImage": true,
-      "accent": "#facc15"
-    },{
+      "id": "games",
+      "title": "Juegos RCOL",
+      "description": "Vuela RCOL y mas",
+      "icon": "gamepad-2",
+      "accent": "#a855f7",
+      "games": [
+        {
+          "title": "Vuela RCOL",
+          "description": "En World App",
+          "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
+          "icon": "./assets/vuela-rcol.png",
+          "isImage": true,
+          "status": "verified"
+        },
+        {
+          "title": "Flappy Butterfly",
+          "description": "Proximamente",
+          "url": "",
+          "icon": "bird",
+          "status": "reviewing"
+        }
+      ]
+    },
+    {
       "id": "puf",
       "title": "Token RCOL en PUF",
       "description": "Ver token y mercado",

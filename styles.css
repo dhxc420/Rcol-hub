@@ -1414,6 +1414,132 @@ html[data-theme="light"] .swap-fee {
   opacity: 0.7;
 }
 
+/* Desplegable de juegos */
+.link-card--games {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.link-card__toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-card__caret {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 220ms ease;
+}
+
+.link-card--games.is-open .link-card__caret {
+  transform: rotate(180deg);
+}
+
+.games-list {
+  display: grid;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+
+.games-list[hidden] {
+  display: none;
+}
+
+.game-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.game-item:active {
+  transform: scale(0.98);
+}
+
+.game-item__icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.game-item__icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+.game-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-item__body strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.game-item__body small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.game-tag {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.game-tag svg {
+  width: 12px;
+  height: 12px;
+}
+
+.game-tag.is-verified {
+  background: color-mix(in srgb, #15d982 18%, transparent);
+  color: #15d982;
+}
+
+.game-tag.is-reviewing {
+  background: color-mix(in srgb, #facc15 20%, transparent);
+  color: #d9a400;
+}
+
+.game-tag.is-unverified {
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+  color: var(--muted);
+}
+
 .link-card--group {
   cursor: default;
 }

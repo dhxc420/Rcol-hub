@@ -62,13 +62,28 @@ const fallbackConfig = {
       accent: "#ffffff"
     },
     {
-      id: "game",
-      title: "Vuela RCOL",
-      description: "En World App",
-      url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
-      icon: "./assets/vuela-rcol.png",
-      isImage: true,
-      accent: "#facc15"
+      id: "games",
+      title: "Juegos RCOL",
+      description: "Vuela RCOL y mas",
+      icon: "gamepad-2",
+      accent: "#a855f7",
+      games: [
+        {
+          title: "Vuela RCOL",
+          description: "En World App",
+          url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
+          icon: "./assets/vuela-rcol.png",
+          isImage: true,
+          status: "verified"
+        },
+        {
+          title: "Flappy Butterfly",
+          description: "Proximamente",
+          url: "",
+          icon: "bird",
+          status: "reviewing"
+        }
+      ]
     },
     {
       id: "puf",
@@ -465,11 +480,72 @@ function renderIcon(link) {
   return `<i data-lucide="${escapeHtml(link.icon || "external-link")}" aria-hidden="true"></i>`;
 }
 
+const GAME_STATUS = {
+  verified: { label: "Verificado", icon: "badge-check", cls: "is-verified" },
+  reviewing: { label: "Verificando", icon: "clock", cls: "is-reviewing" },
+  unverified: { label: "Sin verificar", icon: "alert-triangle", cls: "is-unverified" }
+};
+
+// Tarjeta desplegable "Juegos RCOL" con tag de verificacion por juego.
+function buildGamesCard(link) {
+  const card = document.createElement("div");
+  card.className = "link-card link-card--games";
+  card.style.setProperty("--accent", link.accent || "#a855f7");
+
+  const items = link.games
+    .map((game) => {
+      const status = GAME_STATUS[game.status] || GAME_STATUS.unverified;
+      const tag = `<span class="game-tag ${status.cls}"><i data-lucide="${status.icon}" aria-hidden="true"></i>${status.label}</span>`;
+      const body = `
+        <span class="game-item__icon">${renderIcon(game)}</span>
+        <span class="game-item__body">
+          <strong>${escapeHtml(game.title)}</strong>
+          <small>${escapeHtml(game.description || "")}</small>
+        </span>
+        ${tag}`;
+      if (isPlaceholder(game.url)) {
+        return `<button class="game-item is-soon" type="button" data-soon="1">${body}</button>`;
+      }
+      return `<a class="game-item" href="${encodeURI(game.url)}" target="_blank" rel="noreferrer">${body}</a>`;
+    })
+    .join("");
+
+  card.innerHTML = `
+    <button class="link-card__toggle" type="button" aria-expanded="false">
+      <span class="link-card__icon">${renderIcon(link)}</span>
+      <span class="link-card__body">
+        <h3>${escapeHtml(link.title)}</h3>
+        <p>${escapeHtml(link.description || "")}</p>
+      </span>
+      <i data-lucide="chevron-down" class="link-card__caret" aria-hidden="true"></i>
+    </button>
+    <div class="games-list" hidden>${items}</div>
+  `;
+
+  const toggle = card.querySelector(".link-card__toggle");
+  const list = card.querySelector(".games-list");
+  toggle.addEventListener("click", () => {
+    const open = list.hidden;
+    list.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    card.classList.toggle("is-open", open);
+  });
+  card.querySelectorAll("[data-soon]").forEach((el) =>
+    el.addEventListener("click", () => showToast("Muy pronto disponible"))
+  );
+  return card;
+}
+
 function renderLinks(links) {
   const grid = document.querySelector("#linkGrid");
   grid.innerHTML = "";
 
   links.forEach((link) => {
+    if (Array.isArray(link.games) && link.games.length) {
+      grid.appendChild(buildGamesCard(link));
+      return;
+    }
+
     if (Array.isArray(link.actions) && link.actions.length) {
       const card = document.createElement("div");
       card.className = "link-card link-card--group";

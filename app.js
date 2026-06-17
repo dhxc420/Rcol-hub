@@ -768,6 +768,105 @@ function updateWorldStatus(installResult) {
   status.querySelector("span:last-child").textContent = worldAppReady ? "World App detectado" : "Modo navegador";
 }
 
+/* ---------- Wallet del usuario (nombre + saldo) ---------- */
+
+let walletState = null; // { address, username }
+
+function shortAddress(address) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function renderWallet() {
+  const button = document.querySelector("#walletButton");
+  const nameEl = document.querySelector("#walletName");
+  if (!button || !nameEl) return;
+  if (walletState) {
+    button.classList.add("is-connected");
+    nameEl.textContent = walletState.username ? `@${walletState.username}` : shortAddress(walletState.address);
+    button.setAttribute("aria-label", "Wallet conectada");
+  } else {
+    button.classList.remove("is-connected");
+    nameEl.textContent = "Conectar";
+    button.setAttribute("aria-label", "Conectar wallet");
+  }
+}
+
+async function connectWallet() {
+  if (walletState) return;
+  if (!worldAppReady || !MiniKitApi) {
+    showToast("Abre el hub en World App para conectar");
+    return;
+  }
+  const nonce = (Math.random().toString(36) + Date.now().toString(36)).replace(/[^a-z0-9]/g, "").slice(0, 16);
+  try {
+    const res = await MiniKitApi.walletAuth({
+      nonce,
+      statement: "Conecta tu wallet en RCOL Hub",
+      expirationTime: new Date(Date.now() + 10 * 60 * 1000)
+    });
+    const payload = res?.finalPayload || res;
+    if (payload?.status && payload.status !== "success") throw new Error(payload.error_code || "auth");
+    const address = payload?.address || MiniKitApi.user?.walletAddress;
+    if (!address) throw new Error("sin direccion");
+
+    let username = MiniKitApi.user?.username;
+    if (!username) {
+      try {
+        const user = await MiniKitApi.getUserByAddress?.(address);
+        username = user?.username;
+      } catch {}
+    }
+    walletState = { address, username };
+    renderWallet();
+    updateSwapBalance();
+    showToast(username ? `Hola @${username}` : "Wallet conectada");
+  } catch (error) {
+    const message = error?.message || String(error);
+    if (!/reject|cancel|denied/i.test(message)) showToast("No se pudo conectar la wallet");
+  }
+}
+
+async function getTokenBalanceRaw(tokenAddress, owner) {
+  const data = `0x70a08231${pad32(owner.slice(2))}`;
+  const result = await ethCall(tokenAddress, data);
+  if (!result || result === "0x") return 0n;
+  return BigInt(result);
+}
+
+let walletBalanceStr = "0"; // saldo exacto del token "Pagas" (para MAX)
+
+async function updateSwapBalance() {
+  const maxButton = document.querySelector("#swapMax");
+  const valEl = document.querySelector("#swapBalanceVal");
+  if (!maxButton || !valEl) return;
+  if (!walletState) {
+    maxButton.hidden = true;
+    return;
+  }
+  const fromSym = document.querySelector("#swapFrom")?.value;
+  const token = tokenBySymbol[fromSym];
+  if (!token) return;
+  maxButton.hidden = false;
+  try {
+    const raw = await getTokenBalanceRaw(token.address, walletState.address);
+    walletBalanceStr = fromBaseUnits(raw, token.decimals);
+    valEl.textContent = `${formatTokenAmount(Number(walletBalanceStr))} ${fromSym}`;
+  } catch {
+    valEl.textContent = "—";
+  }
+}
+
+function setupWallet() {
+  document.querySelector("#walletButton")?.addEventListener("click", connectWallet);
+  document.querySelector("#swapMax")?.addEventListener("click", () => {
+    if (!walletState || !(Number(walletBalanceStr) > 0)) return;
+    const input = document.querySelector("#swapAmount");
+    input.value = walletBalanceStr;
+    input.dispatchEvent(new Event("input"));
+  });
+  renderWallet();
+}
+
 /* ---------- Tema claro / oscuro ---------- */
 
 function setupTheme() {
@@ -1097,6 +1196,7 @@ function setupSwap() {
   fromSelect.addEventListener("change", () => {
     enforcePair(fromSelect);
     scheduleQuote();
+    updateSwapBalance();
   });
   toSelect.addEventListener("change", () => {
     enforcePair(toSelect);
@@ -1109,6 +1209,7 @@ function setupSwap() {
     fromSelect.value = toSelect.value;
     toSelect.value = previousFrom;
     scheduleQuote();
+    updateSwapBalance();
   });
 
   const ctaLabel = ctaButton.querySelector("span");
@@ -1169,6 +1270,7 @@ function setupSwap() {
       amountInput.value = "";
       renderQuote(null);
       setTimeout(loadMarketData, 12000);
+      setTimeout(updateSwapBalance, 12000);
     } catch (error) {
       console.error("Swap error:", error);
       const message = error?.message || error?.error_code || String(error);
@@ -1379,6 +1481,7 @@ function setupScrollSpy(navLinks, nftView) {
 async function boot() {
   setupTheme();
   setupSwap();
+  setupWallet();
   setupViews();
   setupNftModal();
   setupReveal();

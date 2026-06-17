@@ -32,6 +32,10 @@
             <strong>RCOL Hub</strong>
           </div>
           <div class="topbar-actions">
+            <button class="wallet-chip" id="walletButton" type="button" aria-label="Conectar wallet">
+              <i data-lucide="wallet" class="wallet-icon" aria-hidden="true"></i>
+              <span class="wallet-name" id="walletName"></span>
+            </button>
             <button class="round-button" id="themeToggle" type="button" aria-label="Cambiar tema claro u oscuro">
               <i data-lucide="sun" class="theme-icon icon-sun" aria-hidden="true"></i>
               <i data-lucide="moon" class="theme-icon icon-moon" aria-hidden="true"></i>
@@ -133,7 +137,12 @@
           </div>
           <div class="swap-box">
             <div class="swap-field">
-              <label for="swapAmount">Pagas</label>
+              <div class="swap-field__head">
+                <label for="swapAmount">Pagas</label>
+                <button class="swap-bal" id="swapMax" type="button" hidden>
+                  Saldo: <span id="swapBalanceVal">0</span> &middot; MAX
+                </button>
+              </div>
               <div class="swap-row">
                 <input id="swapAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
                 <select class="token-select" id="swapFrom" aria-label="Token que pagas"></select>

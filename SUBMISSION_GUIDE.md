@@ -54,12 +54,21 @@ Icon Size:             454x460px (WEBP)
 
 ### Paso 4: Permisos y Capacidades
 
+> ACTUALIZADO (18 jun 2026): la app ahora conecta wallet y firma transacciones (swap).
+
 ```
-World ID:              ✅ Usar (opcional - sin verificación requerida)
+Wallet Auth:           ✅ Usado (MiniKit.walletAuth — conectar wallet + portafolio)
+Send Transaction:      ✅ Usado (MiniKit.sendTransaction — swap Uniswap v2)
 Share API:             ✅ Soportado
 Haptics:               ✅ Soportado
-Wallet:                ⚠️  No usado en esta versión
-Transactions:          ⚠️  No procesadas en este mini app
+World ID:              ⚠️  No se usa verificación (proof) en esta versión
+```
+
+**Contratos a whitelistear** (Advanced → Contract entrypoints), requeridos por el swap:
+
+```
+Permit2:           0x000000000022D473030F116dDEE9F6B43aC78BA3
+Universal Router:  0x8ac7bee993bb44dab564ea4bc9ea67bf9eb5e743
 ```
 
 ### Paso 5: Privacidad
@@ -71,8 +80,10 @@ Pega el contenido de **PRIVACY_POLICY.md** en el campo de privacidad
 ```
 Términos personalizados: 
 "Al usar RCOL Hub, aceptas que es un hub comunitario de RCOLombia DAO.
-El trading ocurre en PUF o DEX (terceros). Worldcoin no es responsable
-de transacciones. Verifica direcciones antes de enviar fondos."
+El swap se ejecuta on-chain (Uniswap v2 en Worldchain) firmado con tu wallet;
+tambien puedes operar en PUF (terceros). RCOL cobra ~2% de impuesto por
+transferencia. El trading conlleva riesgo. Worldcoin no es responsable de las
+transacciones. Verifica direcciones antes de enviar fondos."
 ```
 
 ---

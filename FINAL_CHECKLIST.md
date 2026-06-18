@@ -48,10 +48,13 @@
 
 - [x] MiniKit detection funcional
 - [x] Fallback a navegador cuando no esté World App
+- [x] **Wallet Auth** (MiniKit.walletAuth) — conectar wallet + portafolio
+- [x] **Send Transaction** (MiniKit.sendTransaction) — swap on-chain Uniswap v2
+- [x] Contratos del swap whitelisteados en Developer Portal (Permit2 + Universal Router)
+- [x] Historial de swaps leído on-chain (explorer Worldchain)
 - [x] Share API implementada
 - [x] Haptic feedback disponible
 - [x] World App detection en hero pill
-- [x] World ID buttons visible
 - [x] Config para project ID
 - [x] Manifest compatible con PWA
 

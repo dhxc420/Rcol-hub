@@ -16,10 +16,10 @@ const RCOL_POOL = "0xe5f1c6b95cf182b09807b73f21f622fae08dd439"; // pool Uniswap 
 const GECKO_OHLCV_API = `https://api.geckoterminal.com/api/v2/networks/world-chain/pools/${RCOL_POOL}/ohlcv/hour?aggregate=1&limit=24`;
 
 const SWAP_TOKENS = [
-  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18 },
-  { symbol: "WLD", name: "Worldcoin", address: WLD_ADDRESS, decimals: 18 },
-  { symbol: "USDC", name: "USD Coin", address: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1", decimals: 6 },
-  { symbol: "WETH", name: "Ethereum", address: "0x4200000000000000000000000000000000000006", decimals: 18 }
+  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18, logo: "./assets/rcol-coin.webp" },
+  { symbol: "WLD", name: "Worldcoin", address: WLD_ADDRESS, decimals: 18, logo: "./assets/token-wld.png" },
+  { symbol: "USDC", name: "USD Coin", address: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1", decimals: 6, logo: "./assets/token-usdc.png" },
+  { symbol: "WETH", name: "Ethereum", address: "0x4200000000000000000000000000000000000006", decimals: 18, logo: "./assets/token-weth.png" }
 ];
 
 // RCOL solo tiene liquidez contra WLD (pool Uniswap v2 en Worldchain).
@@ -1531,56 +1531,141 @@ function formatRelativeTime(timestamp) {
   return `hace ${diffD}d`;
 }
 
-function renderTxHistory() {
+const EXPLORER_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2";
+
+// Lee los swaps REALES de la wallet desde la blockchain (transfers de RCOL).
+// Compra = la wallet recibe RCOL; Venta = la wallet envía RCOL.
+// Esto recupera todo el historial aunque localStorage se haya perdido.
+async function fetchOnchainSwaps(address) {
+  const url = `${EXPLORER_API}/addresses/${address}/token-transfers?type=ERC-20&token=${RCOL_ADDRESS}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+  const me = address.toLowerCase();
+  const seen = new Set();
+  const swaps = [];
+  for (const it of items) {
+    const hash = it.transaction_hash;
+    const from = it.from?.hash?.toLowerCase();
+    const to = it.to?.hash?.toLowerCase();
+    if (!hash || seen.has(hash)) continue;
+    let buy;
+    if (to === me) buy = true;
+    else if (from === me) buy = false;
+    else continue;
+    seen.add(hash);
+    const dec = Number(it.total?.decimals ?? 18);
+    const amount = it.total?.value != null ? Number(fromBaseUnits(BigInt(it.total.value), dec)) : null;
+    const time = it.timestamp ? Date.parse(it.timestamp) : null;
+    swaps.push({ buy, rcolAmount: amount, hash, time });
+  }
+  return swaps;
+}
+
+// Normaliza una entrada de localStorage (sabe ambos lados del par) a item de UI.
+function localTxToItem(tx) {
+  return {
+    buy: tx.toSym === "RCOL",
+    hash: tx.hash,
+    time: tx.time,
+    fromSym: tx.fromSym,
+    toSym: tx.toSym,
+    amountIn: tx.amountIn,
+    amountOut: tx.amountOut,
+    rcolOnly: false
+  };
+}
+
+function txItemHtml(item) {
+  const buy = item.buy;
+  const explorerHref = item.hash
+    ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${item.hash}`
+    : null;
+  const timeLabel = item.time ? formatRelativeTime(item.time) : "";
+
+  let pairHtml;
+  if (item.rcolOnly) {
+    // Solo conocemos el lado RCOL (swap recuperado on-chain sin datos locales).
+    const amt = item.rcolAmount != null ? formatTokenAmount(Number(item.rcolAmount)) : "?";
+    pairHtml = `<strong>${buy ? "+" : "−"}${escapeHtml(amt)} RCOL</strong>`;
+  } else {
+    const aIn = item.amountIn != null ? formatTokenAmount(Number(item.amountIn)) : "?";
+    const aOut = item.amountOut != null ? formatTokenAmount(Number(item.amountOut)) : "?";
+    pairHtml = `<strong>${escapeHtml(aIn)} ${escapeHtml(item.fromSym || "?")}</strong>
+      <i data-lucide="arrow-right" class="tx-item__arrow" aria-hidden="true"></i>
+      <strong>${escapeHtml(aOut)} ${escapeHtml(item.toSym || "?")}</strong>`;
+  }
+
+  return `
+    <div class="tx-item${buy ? " tx-item--buy" : " tx-item--sell"}">
+      <span class="tx-item__icon">
+        <i data-lucide="${buy ? "arrow-down-left" : "arrow-up-right"}" aria-hidden="true"></i>
+      </span>
+      <span class="tx-item__body">
+        <span class="tx-item__pair">${pairHtml}</span>
+        <span class="tx-item__meta">
+          <span class="tx-item__time">${escapeHtml(timeLabel)}</span>
+          <span class="tx-item__badge${buy ? " tx-item__badge--buy" : " tx-item__badge--sell"}">${buy ? "Compra" : "Venta"}</span>
+        </span>
+      </span>
+      ${explorerHref
+        ? `<a class="tx-item__link" href="${encodeURI(explorerHref)}" target="_blank" rel="noreferrer" aria-label="Ver en explorador">
+            <i data-lucide="external-link" aria-hidden="true"></i>
+          </a>`
+        : `<span class="tx-item__link tx-item__link--none">
+            <i data-lucide="check-circle" aria-hidden="true"></i>
+          </span>`
+      }
+    </div>`;
+}
+
+function paintTxList(items) {
   const section = document.querySelector("#txHistory");
   const list = document.querySelector("#txHistoryList");
   if (!section || !list) return;
-
-  const history = loadTxHistory();
-  if (!history.length) { section.hidden = true; return; }
+  if (!items.length) { section.hidden = true; return; }
   section.hidden = false;
-
-  const isBuy = (tx) => tx.toSym === "RCOL";
-
-  list.innerHTML = history
-    .map((tx) => {
-      const buy = isBuy(tx);
-      const explorerHref = tx.hash
-        ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${tx.hash}`
-        : null;
-      const timeLabel = tx.time ? formatRelativeTime(tx.time) : "";
-      const amountInFmt = tx.amountIn != null ? formatTokenAmount(Number(tx.amountIn)) : "?";
-      const amountOutFmt = tx.amountOut != null ? formatTokenAmount(Number(tx.amountOut)) : "?";
-
-      return `
-        <div class="tx-item${buy ? " tx-item--buy" : " tx-item--sell"}">
-          <span class="tx-item__icon">
-            <i data-lucide="${buy ? "arrow-down-left" : "arrow-up-right"}" aria-hidden="true"></i>
-          </span>
-          <span class="tx-item__body">
-            <span class="tx-item__pair">
-              <strong>${escapeHtml(amountInFmt)} ${escapeHtml(tx.fromSym || "?")}</strong>
-              <i data-lucide="arrow-right" class="tx-item__arrow" aria-hidden="true"></i>
-              <strong>${escapeHtml(amountOutFmt)} ${escapeHtml(tx.toSym || "?")}</strong>
-            </span>
-            <span class="tx-item__meta">
-              <span class="tx-item__time">${escapeHtml(timeLabel)}</span>
-              <span class="tx-item__badge${buy ? " tx-item__badge--buy" : " tx-item__badge--sell"}">${buy ? "Compra" : "Venta"}</span>
-            </span>
-          </span>
-          ${explorerHref
-            ? `<a class="tx-item__link" href="${encodeURI(explorerHref)}" target="_blank" rel="noreferrer" aria-label="Ver en explorador">
-                <i data-lucide="external-link" aria-hidden="true"></i>
-              </a>`
-            : `<span class="tx-item__link tx-item__link--none">
-                <i data-lucide="check-circle" aria-hidden="true"></i>
-              </span>`
-          }
-        </div>`;
-    })
-    .join("");
-
+  list.innerHTML = items.slice(0, TX_HISTORY_MAX).map(txItemHtml).join("");
   window.lucide?.createIcons?.();
+}
+
+function renderTxHistory() {
+  // 1) Pintar de inmediato lo que haya en localStorage (respuesta instantánea).
+  const local = loadTxHistory();
+  const localItems = local.map(localTxToItem).sort((a, b) => (b.time || 0) - (a.time || 0));
+  paintTxList(localItems);
+
+  // 2) Si hay wallet, traer el historial REAL on-chain y fusionar.
+  if (!walletState) return;
+  const me = walletState.address;
+  fetchOnchainSwaps(me)
+    .then((onchain) => {
+      if (!walletState || walletState.address !== me) return; // cambió la wallet
+      if (!onchain.length) return; // sin datos on-chain: dejamos lo local
+
+      const localByHash = {};
+      local.forEach((tx) => {
+        if (tx.hash) localByHash[tx.hash.toLowerCase()] = tx;
+      });
+
+      // On-chain es la fuente de verdad; enriquecemos con localStorage si coincide el hash.
+      const merged = onchain.map((s) => {
+        const l = s.hash ? localByHash[s.hash.toLowerCase()] : null;
+        if (l) return localTxToItem(l);
+        return { buy: s.buy, hash: s.hash, time: s.time, rcolAmount: s.rcolAmount, rcolOnly: true };
+      });
+
+      // Sumar swaps locales recién hechos que el indexador aún no tiene.
+      const onchainHashes = new Set(onchain.map((s) => s.hash?.toLowerCase()).filter(Boolean));
+      local.forEach((tx) => {
+        if (!tx.hash || !onchainHashes.has(tx.hash.toLowerCase())) merged.push(localTxToItem(tx));
+      });
+
+      merged.sort((a, b) => (b.time || 0) - (a.time || 0));
+      paintTxList(merged);
+    })
+    .catch(() => {});
 }
 
 function updateSwapTeaser() {
@@ -1617,6 +1702,16 @@ const TOKEN_COLORS = {
   WETH: "#8a92b2"
 };
 
+// Ícono del token: logo real con fallback a iniciales si la imagen no carga.
+function tokenIconHtml(token) {
+  const color = TOKEN_COLORS[token.symbol] || "#f8d66d";
+  const init = escapeHtml(token.symbol.slice(0, 2));
+  const img = token.logo
+    ? `<img src="${escapeHtml(token.logo)}" alt="" loading="lazy" onerror="this.remove()" />`
+    : "";
+  return `<span class="wallet-token__icon" style="--tk:${color}"><span class="wallet-token__init">${init}</span>${img}</span>`;
+}
+
 async function fetchAllBalances() {
   const container = document.querySelector("#swapBalances");
   const totalEl = document.querySelector("#walletTotal");
@@ -1628,7 +1723,7 @@ async function fetchAllBalances() {
   container.innerHTML = SWAP_TOKENS.map(
     (token) => `
       <div class="wallet-token is-loading" data-sym="${escapeHtml(token.symbol)}">
-        <span class="wallet-token__icon" style="--tk:${TOKEN_COLORS[token.symbol] || "#f8d66d"}">${escapeHtml(token.symbol.slice(0, 2))}</span>
+        ${tokenIconHtml(token)}
         <span class="wallet-token__info">
           <strong>${escapeHtml(token.symbol)}</strong>
           <small>${escapeHtml(token.name)}</small>
@@ -1668,7 +1763,7 @@ async function fetchAllBalances() {
       const dim = amount > 0 ? "" : " is-empty";
       return `
         <div class="wallet-token${dim}" data-sym="${escapeHtml(token.symbol)}">
-          <span class="wallet-token__icon" style="--tk:${TOKEN_COLORS[token.symbol] || "#f8d66d"}">${escapeHtml(token.symbol.slice(0, 2))}</span>
+          ${tokenIconHtml(token)}
           <span class="wallet-token__info">
             <strong>${escapeHtml(token.symbol)}</strong>
             <small>${escapeHtml(token.name)}</small>

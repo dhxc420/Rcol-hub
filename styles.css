@@ -2184,23 +2184,37 @@ svg {
 }
 
 .wallet-token__icon {
+  position: relative;
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
   border-radius: 50%;
+  overflow: hidden;
   background: color-mix(in srgb, var(--tk) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk) 40%, transparent);
+}
+
+.wallet-token__init {
   color: var(--tk);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tk) 40%, transparent);
 }
 
-html[data-theme="light"] .wallet-token__icon {
+html[data-theme="light"] .wallet-token__init {
   color: color-mix(in srgb, var(--tk) 60%, #2a2208);
+}
+
+.wallet-token__icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #fff;
 }
 
 .wallet-token__info {

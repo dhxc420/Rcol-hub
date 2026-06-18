@@ -239,15 +239,36 @@
           <span class="swap-view__price" id="swapPricePill">—</span>
         </div>
 
-        <div class="swap-wallet-card" id="swapWalletCard">
-          <div class="swap-wallet-card__head">
-            <div class="swap-wallet-card__user">
-              <i data-lucide="wallet" aria-hidden="true"></i>
-              <span id="swapWalletLabel">Conecta tu wallet para ver saldos</span>
+        <div class="wallet-card" id="swapWalletCard">
+          <div class="wallet-card__top">
+            <div class="wallet-card__id">
+              <span class="wallet-card__avatar" id="walletAvatar" aria-hidden="true"></span>
+              <div class="wallet-card__idtext">
+                <span class="wallet-card__name" id="swapWalletLabel">Tu portafolio RCOL</span>
+                <button class="wallet-card__addr" id="walletAddrCopy" type="button" hidden>
+                  <span id="walletAddrText">—</span>
+                  <i data-lucide="copy" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <button class="swap-wallet-connect" id="swapConnectBtn" type="button">Conectar</button>
+            <button class="wallet-card__refresh" id="walletRefresh" type="button" aria-label="Actualizar saldos" hidden>
+              <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            </button>
           </div>
-          <div class="swap-balances" id="swapBalances" hidden></div>
+
+          <div class="wallet-card__total" id="walletTotal" hidden>
+            <span class="stat-label">Valor total</span>
+            <strong id="walletTotalValue">$0.00</strong>
+            <span class="wallet-card__hint" id="walletTotalHint">Saldos en Worldchain</span>
+          </div>
+
+          <div class="wallet-card__empty" id="walletEmpty">
+            <i data-lucide="wallet" aria-hidden="true"></i>
+            <p>Conecta tu wallet de World App para ver tus saldos, tu portafolio y operar RCOL.</p>
+          </div>
+
+          <div class="wallet-tokens" id="swapBalances" hidden></div>
         </div>
 
         <div class="panel swap-panel" id="section-swap">
@@ -290,12 +311,12 @@
           <span id="swapRateText">—</span>
         </div>
 
-        <div class="swap-last-tx" id="swapLastTx" hidden>
-          <span class="stat-label">Ultimo swap</span>
-          <a class="swap-last-tx__link" id="swapLastTxLink" href="#" target="_blank" rel="noreferrer">
-            <span id="swapLastTxText">—</span>
-            <i data-lucide="external-link" aria-hidden="true"></i>
-          </a>
+        <div class="tx-history" id="txHistory" hidden>
+          <div class="tx-history__head">
+            <span class="stat-label">Historial de swaps</span>
+            <button class="tx-history__clear" id="txHistoryClear" type="button">Limpiar</button>
+          </div>
+          <div class="tx-history__list" id="txHistoryList"></div>
         </div>
       </main>
 

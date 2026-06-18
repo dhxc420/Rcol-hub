@@ -949,6 +949,23 @@ function setupWallet() {
     input.value = walletBalanceStr;
     input.dispatchEvent(new Event("input"));
   });
+  document.querySelector("#walletRefresh")?.addEventListener("click", () => {
+    if (!walletState) return;
+    const icon = document.querySelector("#walletRefresh");
+    icon?.classList.add("is-spinning");
+    Promise.resolve(fetchAllBalances()).finally(() =>
+      setTimeout(() => icon?.classList.remove("is-spinning"), 600)
+    );
+  });
+  document.querySelector("#walletAddrCopy")?.addEventListener("click", async () => {
+    if (!walletState) return;
+    try {
+      await navigator.clipboard.writeText(walletState.address);
+      showToast("Dirección copiada");
+    } catch {
+      showToast(walletState.address);
+    }
+  });
   renderWallet();
 }
 
@@ -1359,11 +1376,11 @@ function setupSwap() {
       console.log("RCOL swap result:", result);
       const outNum = Number(fromBaseUnits(amountOut, tokenBySymbol[toSym].decimals));
       const txHash = result?.transaction_id || result?.transactionId || result?.hash || null;
-      saveLastTx(fromSym, toSym, amount, outNum, txHash);
+      saveTxToHistory(fromSym, toSym, amount, outNum, txHash);
       showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
       amountInput.value = "";
       renderQuote(null);
-      renderLastTx();
+      renderTxHistory();
       setTimeout(loadMarketData, 12000);
       setTimeout(updateSwapBalance, 12000);
     } catch (error) {
@@ -1475,35 +1492,95 @@ function renderQuote(state) {
   }
 }
 
-/* ---------- Vista Swap ---------- */
+/* ---------- Historial de swaps ---------- */
 
-const LAST_TX_KEY = "rcol-last-swap";
+const TX_HISTORY_KEY = "rcol-tx-history";
+const TX_HISTORY_MAX = 20;
 
-function saveLastTx(fromSym, toSym, amount, outNum, txHash) {
-  const text = `${formatTokenAmount(amount)} ${fromSym} → ${formatTokenAmount(outNum)} ${toSym}`;
+function saveTxToHistory(fromSym, toSym, amountIn, amountOut, txHash) {
   try {
-    localStorage.setItem(LAST_TX_KEY, JSON.stringify({ text, hash: txHash, time: Date.now() }));
+    let history = [];
+    const raw = localStorage.getItem(TX_HISTORY_KEY);
+    if (raw) history = JSON.parse(raw);
+    if (!Array.isArray(history)) history = [];
+    history.unshift({ fromSym, toSym, amountIn, amountOut, hash: txHash, time: Date.now() });
+    if (history.length > TX_HISTORY_MAX) history = history.slice(0, TX_HISTORY_MAX);
+    localStorage.setItem(TX_HISTORY_KEY, JSON.stringify(history));
   } catch {}
 }
 
-function renderLastTx() {
-  const card = document.querySelector("#swapLastTx");
-  const link = document.querySelector("#swapLastTxLink");
-  const textEl = document.querySelector("#swapLastTxText");
-  if (!card || !link || !textEl) return;
+function loadTxHistory() {
   try {
-    const raw = localStorage.getItem(LAST_TX_KEY);
-    if (!raw) { card.hidden = true; return; }
-    const tx = JSON.parse(raw);
-    if (!tx?.text) { card.hidden = true; return; }
-    textEl.textContent = tx.text;
-    link.href = tx.hash
-      ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${tx.hash}`
-      : "#";
-    card.hidden = false;
+    const raw = localStorage.getItem(TX_HISTORY_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
   } catch {
-    card.hidden = true;
+    return [];
   }
+}
+
+function formatRelativeTime(timestamp) {
+  const diffMs = Date.now() - timestamp;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "ahora";
+  if (diffMin < 60) return `hace ${diffMin}m`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `hace ${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  return `hace ${diffD}d`;
+}
+
+function renderTxHistory() {
+  const section = document.querySelector("#txHistory");
+  const list = document.querySelector("#txHistoryList");
+  if (!section || !list) return;
+
+  const history = loadTxHistory();
+  if (!history.length) { section.hidden = true; return; }
+  section.hidden = false;
+
+  const isBuy = (tx) => tx.toSym === "RCOL";
+
+  list.innerHTML = history
+    .map((tx) => {
+      const buy = isBuy(tx);
+      const explorerHref = tx.hash
+        ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${tx.hash}`
+        : null;
+      const timeLabel = tx.time ? formatRelativeTime(tx.time) : "";
+      const amountInFmt = tx.amountIn != null ? formatTokenAmount(Number(tx.amountIn)) : "?";
+      const amountOutFmt = tx.amountOut != null ? formatTokenAmount(Number(tx.amountOut)) : "?";
+
+      return `
+        <div class="tx-item${buy ? " tx-item--buy" : " tx-item--sell"}">
+          <span class="tx-item__icon">
+            <i data-lucide="${buy ? "arrow-down-left" : "arrow-up-right"}" aria-hidden="true"></i>
+          </span>
+          <span class="tx-item__body">
+            <span class="tx-item__pair">
+              <strong>${escapeHtml(amountInFmt)} ${escapeHtml(tx.fromSym || "?")}</strong>
+              <i data-lucide="arrow-right" class="tx-item__arrow" aria-hidden="true"></i>
+              <strong>${escapeHtml(amountOutFmt)} ${escapeHtml(tx.toSym || "?")}</strong>
+            </span>
+            <span class="tx-item__meta">
+              <span class="tx-item__time">${escapeHtml(timeLabel)}</span>
+              <span class="tx-item__badge${buy ? " tx-item__badge--buy" : " tx-item__badge--sell"}">${buy ? "Compra" : "Venta"}</span>
+            </span>
+          </span>
+          ${explorerHref
+            ? `<a class="tx-item__link" href="${encodeURI(explorerHref)}" target="_blank" rel="noreferrer" aria-label="Ver en explorador">
+                <i data-lucide="external-link" aria-hidden="true"></i>
+              </a>`
+            : `<span class="tx-item__link tx-item__link--none">
+                <i data-lucide="check-circle" aria-hidden="true"></i>
+              </span>`
+          }
+        </div>`;
+    })
+    .join("");
+
+  window.lucide?.createIcons?.();
 }
 
 function updateSwapTeaser() {
@@ -1532,31 +1609,83 @@ async function refreshSwapRate() {
   } catch {}
 }
 
+// Color de marca por token para el avatar y el badge de la lista del portafolio.
+const TOKEN_COLORS = {
+  RCOL: "#f8d66d",
+  WLD: "#ffffff",
+  USDC: "#2775ca",
+  WETH: "#8a92b2"
+};
+
 async function fetchAllBalances() {
   const container = document.querySelector("#swapBalances");
+  const totalEl = document.querySelector("#walletTotal");
+  const totalValueEl = document.querySelector("#walletTotalValue");
   if (!container || !walletState) return;
+
   container.hidden = false;
+  // Esqueleto de carga mientras llegan los saldos on-chain.
   container.innerHTML = SWAP_TOKENS.map(
-    (token) =>
-      `<span class="swap-balance-pill" data-sym="${escapeHtml(token.symbol)}">
-        <span class="swap-balance-pill__sym">${escapeHtml(token.symbol)}</span>
-        <span class="swap-balance-pill__val">...</span>
-      </span>`
+    (token) => `
+      <div class="wallet-token is-loading" data-sym="${escapeHtml(token.symbol)}">
+        <span class="wallet-token__icon" style="--tk:${TOKEN_COLORS[token.symbol] || "#f8d66d"}">${escapeHtml(token.symbol.slice(0, 2))}</span>
+        <span class="wallet-token__info">
+          <strong>${escapeHtml(token.symbol)}</strong>
+          <small>${escapeHtml(token.name)}</small>
+        </span>
+        <span class="wallet-token__amounts">
+          <span class="wallet-token__bal">...</span>
+          <span class="wallet-token__usd"></span>
+        </span>
+      </div>`
   ).join("");
+  window.lucide?.createIcons?.();
 
   const results = await Promise.allSettled(
     SWAP_TOKENS.map((token) => getTokenBalanceRaw(token.address, walletState.address))
   );
-  results.forEach((result, i) => {
+
+  const rows = results.map((result, i) => {
     const token = SWAP_TOKENS[i];
-    const pill = container.querySelector(`[data-sym="${token.symbol}"] .swap-balance-pill__val`);
-    if (!pill) return;
-    if (result.status === "fulfilled") {
-      pill.textContent = formatTokenAmount(Number(fromBaseUnits(result.value, token.decimals)));
-    } else {
-      pill.textContent = "—";
-    }
+    const amount = result.status === "fulfilled" ? Number(fromBaseUnits(result.value, token.decimals)) : 0;
+    const price = tokenPrices[token.symbol] || 0;
+    const usd = amount * price;
+    return { token, amount, usd, ok: result.status === "fulfilled" };
   });
+
+  const total = rows.reduce((sum, row) => sum + row.usd, 0);
+
+  // Orden: tokens con saldo primero (por valor USD desc), luego los vacíos.
+  rows.sort((a, b) => {
+    if ((a.amount > 0) !== (b.amount > 0)) return a.amount > 0 ? -1 : 1;
+    return b.usd - a.usd;
+  });
+
+  container.innerHTML = rows
+    .map(({ token, amount, usd, ok }) => {
+      const balText = !ok ? "—" : formatTokenAmount(amount);
+      const usdText = usd > 0 ? `$${formatPrice(usd)}` : "—";
+      const dim = amount > 0 ? "" : " is-empty";
+      return `
+        <div class="wallet-token${dim}" data-sym="${escapeHtml(token.symbol)}">
+          <span class="wallet-token__icon" style="--tk:${TOKEN_COLORS[token.symbol] || "#f8d66d"}">${escapeHtml(token.symbol.slice(0, 2))}</span>
+          <span class="wallet-token__info">
+            <strong>${escapeHtml(token.symbol)}</strong>
+            <small>${escapeHtml(token.name)}</small>
+          </span>
+          <span class="wallet-token__amounts">
+            <span class="wallet-token__bal">${escapeHtml(balText)}</span>
+            <span class="wallet-token__usd">${escapeHtml(usdText)}</span>
+          </span>
+        </div>`;
+    })
+    .join("");
+  window.lucide?.createIcons?.();
+
+  if (totalEl && totalValueEl) {
+    totalEl.hidden = false;
+    totalValueEl.textContent = `$${formatPrice(total)}`;
+  }
 }
 
 function setSwapRate(rateText, shortText) {
@@ -1576,23 +1705,53 @@ function renderSwapView() {
     setSwapRate(`1 RCOL ≈ $${formatPrice(tokenPrices.RCOL)}`, `$${formatPrice(tokenPrices.RCOL)}`);
   }
 
-  // Wallet card
-  const walletLabel = document.querySelector("#swapWalletLabel");
-  const connectBtn = document.querySelector("#swapConnectBtn");
-  const balancesEl = document.querySelector("#swapBalances");
-  if (walletState) {
-    if (walletLabel) walletLabel.textContent = walletState.username ? `@${walletState.username}` : shortAddress(walletState.address);
-    if (connectBtn) connectBtn.hidden = true;
-    fetchAllBalances();
-  } else {
-    if (walletLabel) walletLabel.textContent = "Conecta tu wallet para ver saldos";
-    if (connectBtn) connectBtn.hidden = false;
-    if (balancesEl) { balancesEl.innerHTML = ""; balancesEl.hidden = true; }
-  }
-
-  renderLastTx();
+  renderWalletCard();
+  renderTxHistory();
   refreshSwapRate();
   scheduleQuote();
+}
+
+// Avatar tipo "blockie": gradiente único derivado de la dirección.
+function avatarGradient(address) {
+  const hex = address.slice(2);
+  const h1 = parseInt(hex.slice(0, 6), 16) % 360;
+  const h2 = (h1 + 60 + (parseInt(hex.slice(6, 10), 16) % 120)) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 70% 55%), hsl(${h2} 80% 45%))`;
+}
+
+function renderWalletCard() {
+  const nameEl = document.querySelector("#swapWalletLabel");
+  const connectBtn = document.querySelector("#swapConnectBtn");
+  const refreshBtn = document.querySelector("#walletRefresh");
+  const balancesEl = document.querySelector("#swapBalances");
+  const totalEl = document.querySelector("#walletTotal");
+  const emptyEl = document.querySelector("#walletEmpty");
+  const avatarEl = document.querySelector("#walletAvatar");
+  const addrBtn = document.querySelector("#walletAddrCopy");
+  const addrText = document.querySelector("#walletAddrText");
+
+  if (walletState) {
+    if (nameEl) nameEl.textContent = walletState.username ? `@${walletState.username}` : "Mi portafolio";
+    if (connectBtn) connectBtn.hidden = true;
+    if (refreshBtn) refreshBtn.hidden = false;
+    if (emptyEl) emptyEl.hidden = true;
+    if (avatarEl) avatarEl.style.background = avatarGradient(walletState.address);
+    if (addrBtn && addrText) {
+      addrBtn.hidden = false;
+      addrText.textContent = shortAddress(walletState.address);
+    }
+    fetchAllBalances();
+  } else {
+    if (nameEl) nameEl.textContent = "Tu portafolio RCOL";
+    if (connectBtn) connectBtn.hidden = false;
+    if (refreshBtn) refreshBtn.hidden = true;
+    if (emptyEl) emptyEl.hidden = false;
+    if (totalEl) totalEl.hidden = true;
+    if (avatarEl) avatarEl.style.background = "";
+    if (addrBtn) addrBtn.hidden = true;
+    if (balancesEl) { balancesEl.innerHTML = ""; balancesEl.hidden = true; }
+  }
+  window.lucide?.createIcons?.();
 }
 
 /* ---------- Vistas (hub / nft / swap) ---------- */
@@ -1721,12 +1880,21 @@ function setupScrollSpy(navLinks, nftView, swapView) {
 
 /* ---------- Boot ---------- */
 
+function setupTxHistory() {
+  document.querySelector("#txHistoryClear")?.addEventListener("click", () => {
+    try { localStorage.removeItem(TX_HISTORY_KEY); } catch {}
+    renderTxHistory();
+    showToast("Historial borrado");
+  });
+}
+
 async function boot() {
   setupTheme();
   setupSwap();
   setupWallet();
   setupViews();
   setupNftModal();
+  setupTxHistory();
   setupReveal();
   loadMarketData();
 

@@ -865,11 +865,6 @@ function renderWallet() {
     nameEl.textContent = "Conectar";
     button.setAttribute("aria-label", "Conectar wallet");
   }
-  // El boton de swap refleja si hay que conectar primero (capa de seguridad).
-  const cta = document.querySelector("#swapCta");
-  if (cta && !cta.disabled) {
-    cta.querySelector("span").textContent = walletState ? "Swap ahora" : "Conecta tu wallet";
-  }
 }
 
 async function connectWallet() {
@@ -1170,8 +1165,9 @@ let lastQuote = null;
 let quoteTimer = null;
 let quoteSeq = 0;
 
-function openPufFallback() {
-  // Respaldo: PUF Wallet abre la pagina del token RCOL para completar el cambio.
+function openPufSwap() {
+  // Abre la pagina del token RCOL en PUF para completar la compra/venta.
+  // Ruta autorizada: el usuario paga 1% (no 2%) y el proyecto cobra su creator fee.
   const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
   window.open(`https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`, "_blank", "noreferrer");
 }
@@ -1314,86 +1310,14 @@ function setupSwap() {
     updateSwapBalance();
   });
 
-  const ctaLabel = ctaButton.querySelector("span");
-  const setCta = (text, disabled) => {
-    ctaLabel.textContent = text;
-    ctaButton.disabled = disabled;
-    ctaButton.classList.toggle("is-busy", disabled);
-  };
-
-  ctaButton.addEventListener("click", async () => {
-    const fromSym = fromSelect.value;
+  // El swap se completa DENTRO de PUF: ahi RCOL cobra 1% (no 2%) por ser ruta
+  // autorizada, el usuario recibe mejor precio y el proyecto cobra su creator fee.
+  // La vista del hub funciona como cotizador en vivo y lanza a PUF para firmar.
+  ctaButton.addEventListener("click", () => {
     const toSym = toSelect.value;
-    const amount = parseFloat(amountInput.value);
-
-    if (!worldAppReady || !MiniKitApi) {
-      showToast("Abre el hub en World App para firmar el swap");
-      openPufFallback();
-      return;
-    }
-
-    // Capa de seguridad: exige conectar la wallet antes de poder swappear.
-    if (!walletState) {
-      const connected = await connectWallet();
-      if (!connected) return;
-    }
-
-    if (!(amount > 0)) {
-      showToast("Ingresa una cantidad para cambiar");
-      amountInput.focus();
-      return;
-    }
-
-    const fromToken = tokenBySymbol[fromSym];
-    const path = buildPath(fromSym, toSym);
-    const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
-
-    try {
-      setCta("Cotizando...", true);
-      const amountOut = await quoteAmountOut(amountInWei, path);
-      if (!amountOut || amountOut === 0n) {
-        showToast("Sin liquidez para ese par ahora");
-        return;
-      }
-      const minOut = (amountOut * (10000n - SWAP_SLIPPAGE_BPS)) / 10000n;
-      const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
-      const swapInput = encodeV2SwapInput(UR_MSG_SENDER, amountInWei, minOut, path);
-
-      // MiniKit v2: calldata pre-codificado, transactions (plural), expiration 0 en Permit2.approve.
-      const approveData = encodePermit2Approve(fromToken.address, UNIVERSAL_ROUTER, amountInWei, 0n);
-      const executeData = encodeUniversalRouterExecute(V2_SWAP_EXACT_IN, swapInput, deadline);
-
-      setCta("Confirma en tu wallet...", true);
-      const result = await MiniKitApi.sendTransaction({
-        chainId: 480,
-        transactions: [
-          { to: PERMIT2, data: approveData },
-          { to: UNIVERSAL_ROUTER, data: executeData }
-        ]
-      });
-
-      // v2 resuelve con los datos en exito y LANZA en error (lo captura el catch).
-      console.log("RCOL swap result:", result);
-      const outNum = Number(fromBaseUnits(amountOut, tokenBySymbol[toSym].decimals));
-      const txHash = result?.transaction_id || result?.transactionId || result?.hash || null;
-      saveTxToHistory(fromSym, toSym, amount, outNum, txHash);
-      showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
-      amountInput.value = "";
-      renderQuote(null);
-      renderTxHistory();
-      setTimeout(loadMarketData, 12000);
-      setTimeout(updateSwapBalance, 12000);
-    } catch (error) {
-      console.error("Swap error:", error);
-      const message = error?.message || error?.error_code || String(error);
-      if (/reject|cancel|denied/i.test(message)) {
-        showToast("Swap cancelado");
-      } else {
-        showToast(`Swap fallo: ${message}`);
-      }
-    } finally {
-      setCta(walletState ? "Swap ahora" : "Conecta tu wallet", false);
-    }
+    const buying = toSym === "RCOL";
+    showToast(buying ? "Abriendo PUF para comprar RCOL" : "Abriendo PUF para vender RCOL");
+    openPufSwap();
   });
 
   updateSwapTeaser();
@@ -1497,18 +1421,8 @@ function renderQuote(state) {
 const TX_HISTORY_KEY = "rcol-tx-history";
 const TX_HISTORY_MAX = 20;
 
-function saveTxToHistory(fromSym, toSym, amountIn, amountOut, txHash) {
-  try {
-    let history = [];
-    const raw = localStorage.getItem(TX_HISTORY_KEY);
-    if (raw) history = JSON.parse(raw);
-    if (!Array.isArray(history)) history = [];
-    history.unshift({ fromSym, toSym, amountIn, amountOut, hash: txHash, time: Date.now() });
-    if (history.length > TX_HISTORY_MAX) history = history.slice(0, TX_HISTORY_MAX);
-    localStorage.setItem(TX_HISTORY_KEY, JSON.stringify(history));
-  } catch {}
-}
-
+// El historial se reconstruye desde la blockchain (fetchOnchainSwaps); localStorage
+// solo se conserva como cache opcional para pintar al instante si existiera.
 function loadTxHistory() {
   try {
     const raw = localStorage.getItem(TX_HISTORY_KEY);
@@ -1975,21 +1889,12 @@ function setupScrollSpy(navLinks, nftView, swapView) {
 
 /* ---------- Boot ---------- */
 
-function setupTxHistory() {
-  document.querySelector("#txHistoryClear")?.addEventListener("click", () => {
-    try { localStorage.removeItem(TX_HISTORY_KEY); } catch {}
-    renderTxHistory();
-    showToast("Historial borrado");
-  });
-}
-
 async function boot() {
   setupTheme();
   setupSwap();
   setupWallet();
   setupViews();
   setupNftModal();
-  setupTxHistory();
   setupReveal();
   loadMarketData();
 

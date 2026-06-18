@@ -2330,20 +2330,17 @@ html[data-theme="light"] .wallet-token__init {
   gap: 10px;
 }
 
-.tx-history__clear {
-  border: 0;
+.tx-history__src {
+  display: inline-flex;
+  align-items: center;
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--chip);
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 650;
-  cursor: pointer;
-  transition: opacity 120ms ease;
-}
-
-.tx-history__clear:active {
-  opacity: 0.6;
+  background: color-mix(in srgb, #15d982 16%, transparent);
+  color: #15d982;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .tx-history__list {

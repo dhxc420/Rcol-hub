@@ -915,6 +915,59 @@ html[data-theme="light"] .swap-fee {
   transform: none;
 }
 
+/* Nota de transparencia: PUF como alternativa mas barata */
+.swap-puf-hint {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #ff1476 28%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, #ff1476 8%, transparent);
+  color: var(--ink);
+  text-align: left;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.swap-puf-hint:active {
+  transform: scale(0.98);
+}
+
+.swap-puf-hint span {
+  flex: 1;
+  min-width: 0;
+}
+
+.swap-puf-hint strong {
+  color: #ff1476;
+  font-weight: 750;
+}
+
+html[data-theme="light"] .swap-puf-hint strong {
+  color: #d10a5e;
+}
+
+.swap-puf-hint__info {
+  flex-shrink: 0;
+  color: #ff1476;
+}
+
+.swap-puf-hint__info,
+.swap-puf-hint__go {
+  width: 16px;
+  height: 16px;
+}
+
+.swap-puf-hint__go {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
 /* ---------- Vista NFT separada ---------- */
 
 .nft-view {

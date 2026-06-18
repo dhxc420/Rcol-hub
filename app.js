@@ -1399,6 +1399,12 @@ function setupSwap() {
     }
   });
 
+  // Transparencia: ofrecer PUF como alternativa mas barata (1% en vez de ~2%).
+  document.querySelector("#swapPufHint")?.addEventListener("click", () => {
+    showToast("Abriendo PUF (comision 1%)");
+    openPufSwap();
+  });
+
   updateSwapTeaser();
   refreshSwapRate();
   scheduleQuote();

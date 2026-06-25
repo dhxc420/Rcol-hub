@@ -82,6 +82,13 @@ const fallbackConfig = {
           url: "",
           icon: "bird",
           status: "reviewing"
+        },
+        {
+          title: "World Runner",
+          description: "Proximamente",
+          url: "https://world.org/es-es/ecosystem/app_bb51c58c8fd37c9439bff25d16b1bbc5",
+          icon: "footprints",
+          status: "reviewing"
         }
       ]
     },
@@ -133,6 +140,14 @@ const fallbackConfig = {
       accent: "#facc15",
       image: "",
       url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
+    },
+    {
+      title: "World Runner",
+      subtitle: "Proximamente",
+      icon: "footprints",
+      accent: "#a855f7",
+      image: "",
+      url: "https://world.org/es-es/ecosystem/app_bb51c58c8fd37c9439bff25d16b1bbc5"
     },
     {
       title: "Flappy Butterfly",

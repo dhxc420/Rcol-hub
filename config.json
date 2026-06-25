@@ -40,15 +40,15 @@
         },
         {
           "title": "Flappy Butterfly",
-          "description": "Proximamente",
-          "url": "",
+          "description": "En World App",
+          "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1",
           "icon": "bird",
           "status": "reviewing"
         },
         {
-          "title": "World Runner",
-          "description": "Proximamente",
-          "url": "https://world.org/es-es/ecosystem/app_bb51c58c8fd37c9439bff25d16b1bbc5",
+          "title": "World Runner Arcade Game",
+          "description": "En World App",
+          "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c",
           "icon": "footprints",
           "status": "reviewing"
         }
@@ -104,20 +104,20 @@
       "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
     },
     {
-      "title": "World Runner",
-      "subtitle": "Proximamente",
+      "title": "World Runner Arcade Game",
+      "subtitle": "Juega ahora en World App",
       "icon": "footprints",
       "accent": "#a855f7",
       "image": "",
-      "url": "https://world.org/es-es/ecosystem/app_bb51c58c8fd37c9439bff25d16b1bbc5"
+      "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c"
     },
     {
       "title": "Flappy Butterfly",
-      "subtitle": "El nuevo juego RCOL",
+      "subtitle": "Juega ahora en World App",
       "icon": "bird",
       "accent": "#18e0a0",
       "image": "",
-      "url": ""
+      "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1"
     },
     {
       "title": "Siguenos en X",

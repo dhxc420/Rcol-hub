@@ -1,7 +1,7 @@
 {
   "name": "RCOL Hub",
   "short_name": "RCOL",
-  "description": "Hub oficial de RCOLombia DAO para World App: sitio web, comunidad, Vuela RCOL, DEX y PUF.",
+  "description": "Hub comunitario de RCOLombia DAO para World App: mercado, swap, juegos y comunidad.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#080704",

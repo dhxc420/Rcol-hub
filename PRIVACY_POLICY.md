@@ -1,82 +1,72 @@
-# Política de Privacidad - RCOL Hub
+# Política de Privacidad — RCOL Hub
 
-**Última actualización:** 8 de junio de 2026
+**Última actualización:** 27 de junio de 2026  
+**URL pública:** https://rcol-hub.vercel.app/privacy.html
 
-## 1. Información que Recopilamos
+## 1. Información que recopilamos
 
-### Datos No Personales (Automáticos)
-- IP del navegador (para server logs)
+### Datos automáticos (servidor / hosting)
+- Dirección IP (logs del hosting Vercel)
 - User-Agent del navegador
-- Tipo de dispositivo (móvil/desktop)
+- Tipo de dispositivo
 - Timestamps de acceso
 
-### Datos del World ID (Solo en World App)
-Cuando te verificas con World ID:
-- **Solo se almacena localmente** en `sessionStorage` un token de sesión
-- No se envía a nuestros servidores
-- Se limpia al cerrar la sesión
-- Contiene SOLO: `rcol-world-id-status`
+### Datos en World App (cliente)
+Cuando usas RCOL Hub dentro de **World App**:
+- **Wallet:** al conectar, leemos tu dirección pública y `@username` vía MiniKit para mostrar saldos y firmar swaps. No guardamos la dirección en nuestros servidores.
+- **World ID:** si verificas con World ID, enviamos la prueba criptográfica a la API de Worldcoin (`developer.world.org`) para validarla. No recibimos datos biométricos ni documentos.
+- **Sesión local:** guardamos en `sessionStorage` si completaste la verificación (`rcol-world-id-verified`) hasta que cierres la pestaña.
 
-### Datos que NO Recopilamos
-- ❌ Historial de navegación
-- ❌ Cookies de seguimiento
-- ❌ Direcciones de cartera (wallet address)
-- ❌ Email o información de contacto
-- ❌ Datos de transacciones
+### Datos que NO almacenamos en servidores propios
+- Historial de navegación
+- Cookies de seguimiento publicitario
+- Email o teléfono
+- Claves privadas
+- Historial de transacciones (el historial de swap se lee on-chain en tu dispositivo)
 
-## 2. Cómo Usamos la Información
+## 2. Cómo usamos la información
 
-Los datos recopilados se usan SOLO para:
-- Diagnosticar problemas técnicos
-- Detectar y prevenir abuso
-- Mantener el servicio disponible
-- Cumplir con leyes aplicables
+- Mostrar precios, saldos y ejecutar swaps que **tú** firmas con tu wallet
+- Verificar humanidad con World ID cuando lo solicitas
+- Diagnosticar errores técnicos y prevenir abuso
+- Cumplir obligaciones legales aplicables
 
-## 3. Integración con Worldcoin
+## 3. Integración con Worldcoin / Tools for Humanity
 
-Cuando abres RCOL Hub en **World App**:
-- Verifies tu identidad con **World ID** (verificación Worldcoin)
-- Tu verificación se almacena en World App, no en nuestros servidores
-- Respetamos la política de privacidad de Worldcoin: https://worldcoin.org/privacy
+RCOL Hub es una **mini app de terceros**, no desarrollada ni respaldada por Worldcoin.
+
+- **MiniKit:** wallet auth, transacciones y compartir
+- **World ID (IDKit):** verificación opcional de humano único
+- Política de Worldcoin: https://world.org/privacy
 
 ## 4. Terceros
 
-Compartimos links a:
-- 🔗 **PUF (Worldcoin)** - Portal Universal de Finanzas
-- 🦄 **Uniswap** - DEX en World Chain
-- 📊 **DexScreener** - Información de precios
-
-Cada tercero tiene su propia política de privacidad. No somos responsables de sus prácticas.
+Enlaces a servicios externos con sus propias políticas:
+- PUF (World App)
+- Uniswap v2 en Worldchain
+- DexScreener / GeckoTerminal
+- Alchemy RPC (lectura on-chain)
 
 ## 5. Seguridad
 
-- ✅ HTTPS en todo el sitio (TLS 1.3)
-- ✅ No almacenamos datos sensibles
-- ✅ Headers de seguridad (CSP, X-Frame-Options)
-- ✅ No hay cookies con SameSite=None
+- HTTPS en todo el sitio
+- Headers de seguridad (CSP, HSTS)
+- La clave de firma World ID (`WORLD_ID_SIGNING_KEY`) solo existe en el servidor Vercel, nunca en el navegador
 
-## 6. Derechos del Usuario
+## 6. Tus derechos
 
-Tienes derecho a:
-- Acceder a cualquier dato que tengamos de ti
-- Solicitar eliminación de datos
-- No recibir publicidad personalizada
-- Portabilidad de datos
+Puedes solicitar información sobre datos que tengamos o su eliminación contactándonos.
 
-## 7. Cambios a Esta Política
+## 7. Cambios
 
-Podemos actualizar esta política en cualquier momento. El cambio será efectivo cuando lo publiquemos en este sitio.
+Publicaremos cambios en esta misma URL.
 
 ## 8. Contacto
 
-Preguntas sobre privacidad:
-- 📧 Telegram: t.me/updatesDzc
-- 🐦 Twitter: @Rcol_Oficial
-- 🌐 Web: https://dhxc420.github.io/Rcol.fun/
+- Telegram: https://t.me/updatesDzc
+- X: https://x.com/Rcol_Oficial
+- Web: https://dhxc420.github.io/Rcol.fun/
 
 ---
 
-**RCOLombia DAO**  
-Proyecto: RCOL Hub Mini App  
-Versión: 1.0  
-Cumplimiento: GDPR-compatible, LGPD-compatible
+**RCOLombia DAO** · RCOL Hub Mini App

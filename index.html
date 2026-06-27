@@ -51,16 +51,20 @@
           <img class="coin-hero" src="./assets/rcol-coin.webp" alt="Moneda RCOL Republica de Colombia" />
           <span class="butterfly butterfly-a" aria-hidden="true">*</span>
           <span class="butterfly butterfly-b" aria-hidden="true">*</span>
-          <span class="world-pill" id="worldStatus">
+          <span class="world-pill" id="worldStatus" role="status">
             <span class="dot"></span>
             <span>Comprobando World App</span>
           </span>
+          <button class="world-verify-btn" id="worldIdVerify" type="button" hidden>
+            <i data-lucide="badge-check" aria-hidden="true"></i>
+            <span>Verificar con World ID</span>
+          </button>
         </section>
 
         <section class="intro">
           <p class="eyebrow">Colombia DAO | The People's Coin</p>
-          <h1 id="appTitle">Bienvenido al Hub Oficial de RCOLombia DAO</h1>
-          <p id="tagline">Solo humanos verificados. Nuestra identidad, nuestro respaldo.</p>
+          <h1 id="appTitle">Bienvenido al Hub de RCOLombia DAO</h1>
+          <p id="tagline">Comunidad verificada con World ID. Nuestra identidad, nuestro respaldo.</p>
         </section>
       </header>
 
@@ -161,11 +165,11 @@
         </section>
 
         <section class="rcolito-card" aria-labelledby="rcolitoTitle">
-          <img src="./assets/rcolito-card.webp" alt="RCOLito mascota oficial de RCOL" />
+          <img src="./assets/rcolito-card.webp" alt="RCOLito mascota de RCOL" />
           <div>
             <span class="section-label">RCOLito</span>
             <h2 id="rcolitoTitle">Menos bots, mas humanos</h2>
-            <p>La mascota oficial recuerda la idea central de RCOL: comunidad real, identidad humana y construccion conjunta.</p>
+            <p>RCOLito representa la idea central de RCOL: comunidad real, identidad humana y construccion conjunta.</p>
           </div>
         </section>
 
@@ -183,9 +187,12 @@
         <section class="community-panel" id="section-community" aria-labelledby="communityTitle">
           <div class="section-heading">
             <span class="section-label">Comunidad</span>
-            <h2 id="communityTitle">Canales oficiales</h2>
+            <h2 id="communityTitle">Canales de la comunidad</h2>
           </div>
           <div class="community-links" id="communityLinks"></div>
+          <p class="legal-links">
+            <a href="./privacy.html">Politica de privacidad</a>
+          </p>
         </section>
 
       </main>

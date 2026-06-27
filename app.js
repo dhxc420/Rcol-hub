@@ -1,4 +1,7 @@
 const CONFIG_URL = "./config.json";
+const WORLD_ID_STORAGE_KEY = "rcol-world-id-verified";
+const ADDRESS_BOOK = "0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D";
+const ADDRESS_BOOK_SELECTOR = "0x47e7ef24"; // addressVerifiedUntil(address)
 
 const RCOL_ADDRESS = "0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a";
 const RCOL_DECIMALS = 18;
@@ -38,16 +41,16 @@ const SWAP_DEADLINE_MIN = 20;
 
 const fallbackConfig = {
   brand: "RCOL Hub",
-  headline: "Bienvenido al Hub Oficial de RCOLombia DAO",
-  tagline: "Solo humanos verificados. Nuestra identidad, nuestro respaldo.",
+  headline: "Bienvenido al Hub de RCOLombia DAO",
+  tagline: "Comunidad verificada con World ID. Nuestra identidad, nuestro respaldo.",
   tokenAddress: RCOL_ADDRESS,
   worldIdAppId: "app_a95edab5dd0638c6f02dcf3ff407694c",
   worldIdRpId: "rp_013fbbe37584c9e5",
-  worldIdAction: "",
+  worldIdAction: "rcol-hub-access",
   links: [
     {
       id: "website",
-      title: "Sitio Web Oficial",
+      title: "Sitio web RCOL",
       description: "rcol.fun",
       url: "https://dhxc420.github.io/Rcol.fun/",
       icon: "globe-2",
@@ -71,7 +74,7 @@ const fallbackConfig = {
         {
           title: "Vuela RCOL",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
+          url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3",
           icon: "./assets/vuela-rcol.png",
           isImage: true,
           status: "reviewing"
@@ -79,14 +82,14 @@ const fallbackConfig = {
         {
           title: "Flappy Butterfly",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1",
+          url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32",
           icon: "bird",
           status: "reviewing"
         },
         {
           title: "World Runner Arcade Game",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c",
+          url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5",
           icon: "footprints",
           status: "reviewing"
         }
@@ -139,7 +142,7 @@ const fallbackConfig = {
       icon: "gamepad-2",
       accent: "#facc15",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
+      url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3"
     },
     {
       title: "World Runner Arcade Game",
@@ -147,7 +150,7 @@ const fallbackConfig = {
       icon: "footprints",
       accent: "#a855f7",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c"
+      url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5"
     },
     {
       title: "Flappy Butterfly",
@@ -155,7 +158,7 @@ const fallbackConfig = {
       icon: "bird",
       accent: "#18e0a0",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1"
+      url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32"
     },
     {
       title: "Siguenos en X",
@@ -170,7 +173,7 @@ const fallbackConfig = {
     title: "RCOL Protocol Genesis",
     tagline: "NFT de utilidad",
     description:
-      "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
+      "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge en el hub y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
     image: "./assets/nft-genesis.png",
     supply: 100,
     minted: 0,
@@ -187,7 +190,7 @@ const fallbackConfig = {
       {
         icon: "badge-check",
         title: "Holder verificado",
-        description: "Badge oficial en el hub que identifica tu wallet como holder Genesis."
+        description: "Badge en el hub que identifica tu wallet como holder Genesis."
       },
       {
         icon: "gift",
@@ -852,11 +855,176 @@ async function shareApp(config) {
 }
 
 function updateWorldStatus(installResult) {
-  const status = document.querySelector("#worldStatus");
   worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success);
+  renderWorldIdStatus();
+}
+
+/* ---------- World ID (IDKit + Address Book) ---------- */
+
+let worldIdVerified = false;
+let worldIdBusy = false;
+
+function readSessionVerified() {
+  try {
+    return sessionStorage.getItem(WORLD_ID_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSessionVerified(value) {
+  try {
+    if (value) sessionStorage.setItem(WORLD_ID_STORAGE_KEY, "1");
+    else sessionStorage.removeItem(WORLD_ID_STORAGE_KEY);
+  } catch {}
+}
+
+async function checkOrbVerified(address) {
+  if (!address) return false;
+  try {
+    const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@2.0.3/address-book/+esm");
+    if (mod?.getIsUserVerified) return mod.getIsUserVerified(address, WORLDCHAIN_RPC);
+  } catch {}
+  try {
+    const data = ADDRESS_BOOK_SELECTOR + pad32(address.slice(2));
+    const result = await ethCall(ADDRESS_BOOK, data);
+    if (!result || result === "0x") return false;
+    return BigInt(result) > BigInt(Math.floor(Date.now() / 1000));
+  } catch {
+    return false;
+  }
+}
+
+async function refreshWorldIdStatus() {
+  if (readSessionVerified()) {
+    worldIdVerified = true;
+    renderWorldIdStatus();
+    return true;
+  }
+  if (walletState?.address) {
+    worldIdVerified = await checkOrbVerified(walletState.address);
+    if (worldIdVerified) writeSessionVerified(true);
+  } else {
+    worldIdVerified = false;
+  }
+  renderWorldIdStatus();
+  return worldIdVerified;
+}
+
+function renderWorldIdStatus() {
+  const status = document.querySelector("#worldStatus");
+  const verifyBtn = document.querySelector("#worldIdVerify");
+  if (!status) return;
+
   status.classList.toggle("is-ready", worldAppReady);
   status.classList.toggle("is-browser", !worldAppReady);
-  status.querySelector("span:last-child").textContent = worldAppReady ? "World App detectado" : "Modo navegador";
+  status.classList.toggle("is-verified", worldAppReady && worldIdVerified);
+  status.classList.toggle("is-unverified", worldAppReady && !worldIdVerified);
+
+  const label = status.querySelector("span:last-child");
+  if (!worldAppReady) {
+    label.textContent = "Modo navegador";
+  } else if (worldIdVerified) {
+    label.textContent = "Humano verificado";
+  } else {
+    label.textContent = "World App detectado";
+  }
+
+  if (verifyBtn) {
+    const showVerify = worldAppReady && !worldIdVerified;
+    verifyBtn.hidden = !showVerify;
+    verifyBtn.classList.toggle("is-busy", worldIdBusy);
+    verifyBtn.querySelector("span").textContent = worldIdBusy
+      ? "Verificando..."
+      : "Verificar con World ID";
+  }
+}
+
+async function verifyWithWorldId() {
+  const config = activeConfig || fallbackConfig;
+  if (!worldAppReady) {
+    showToast("Abre RCOL Hub en World App para verificar");
+    return false;
+  }
+  if (worldIdVerified) {
+    showToast("Ya estas verificado");
+    return true;
+  }
+  if (worldIdBusy) return false;
+
+  const action = config.worldIdAction || "rcol-hub-access";
+  const appId = config.worldIdAppId;
+  const rpId = config.worldIdRpId;
+  if (!appId || !rpId) {
+    showToast("World ID no configurado");
+    return false;
+  }
+
+  worldIdBusy = true;
+  renderWorldIdStatus();
+
+  try {
+    const sigRes = await fetch("/api/rp-signature", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action })
+    });
+    const rpSig = await sigRes.json();
+    if (!sigRes.ok) {
+      showToast(rpSig.error || "Firma World ID no disponible");
+      return false;
+    }
+
+    const { IDKit, orbLegacy } = await import("https://cdn.jsdelivr.net/npm/@worldcoin/idkit-core@4.2.0/+esm");
+    const signal = walletState?.address || `rcol-hub-${Date.now()}`;
+
+    const request = await IDKit.request({
+      app_id: appId,
+      action,
+      rp_context: {
+        rp_id: rpId,
+        nonce: rpSig.nonce,
+        created_at: rpSig.created_at,
+        expires_at: rpSig.expires_at,
+        signature: rpSig.sig
+      },
+      allow_legacy_proofs: true,
+      environment: "production"
+    }).preset(orbLegacy({ signal }));
+
+    const result = await request.pollUntilCompletion();
+
+    const verifyRes = await fetch("/api/verify-proof", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ rp_id: rpId, idkitResponse: result })
+    });
+    if (!verifyRes.ok) {
+      const err = await verifyRes.json().catch(() => ({}));
+      throw new Error(err.error || "Verificacion rechazada");
+    }
+
+    worldIdVerified = true;
+    writeSessionVerified(true);
+    showToast("Humano verificado con World ID");
+    renderWorldIdStatus();
+    return true;
+  } catch (error) {
+    console.error("World ID verify error:", error);
+    const message = error?.message || String(error);
+    if (/reject|cancel|denied|closed/i.test(message)) showToast("Verificacion cancelada");
+    else showToast("No se pudo verificar. Intenta de nuevo.");
+    return false;
+  } finally {
+    worldIdBusy = false;
+    renderWorldIdStatus();
+  }
+}
+
+function setupWorldId() {
+  document.querySelector("#worldIdVerify")?.addEventListener("click", verifyWithWorldId);
+  worldIdVerified = readSessionVerified();
+  renderWorldIdStatus();
 }
 
 /* ---------- Wallet del usuario (nombre + saldo) ---------- */
@@ -914,6 +1082,7 @@ async function connectWallet() {
     renderWallet();
     updateSwapBalance();
     if (!document.querySelector("#swapView")?.hidden) renderSwapView();
+    await refreshWorldIdStatus();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
     return true;
   } catch (error) {
@@ -2008,6 +2177,7 @@ async function boot() {
   setupViews();
   setupNftModal();
   setupReveal();
+  setupWorldId();
   loadMarketData();
 
   const [config, installResult] = await Promise.all([loadConfig(), loadMiniKit()]);

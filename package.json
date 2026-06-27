@@ -1,0 +1,8 @@
+{
+  "name": "rcol-hub",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@worldcoin/idkit-core": "^4.2.0"
+  }
+}

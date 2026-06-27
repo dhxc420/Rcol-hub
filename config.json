@@ -1,15 +1,15 @@
 {
   "brand": "RCOL Hub",
-  "headline": "Bienvenido al Hub Oficial de RCOLombia DAO",
-  "tagline": "Solo humanos verificados. Nuestra identidad, nuestro respaldo.",
+  "headline": "Bienvenido al Hub de RCOLombia DAO",
+  "tagline": "Comunidad verificada con World ID. Nuestra identidad, nuestro respaldo.",
   "tokenAddress": "0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a",
   "worldIdAppId": "app_a95edab5dd0638c6f02dcf3ff407694c",
   "worldIdRpId": "rp_013fbbe37584c9e5",
-  "worldIdAction": "",
+  "worldIdAction": "rcol-hub-access",
   "links": [
     {
       "id": "website",
-      "title": "Sitio Web Oficial",
+      "title": "Sitio web RCOL",
       "description": "rcol.fun",
       "url": "https://dhxc420.github.io/Rcol.fun/",
       "icon": "globe-2",
@@ -33,7 +33,7 @@
         {
           "title": "Vuela RCOL",
           "description": "En World App",
-          "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0",
+          "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3",
           "icon": "./assets/vuela-rcol.png",
           "isImage": true,
           "status": "reviewing"
@@ -41,14 +41,14 @@
         {
           "title": "Flappy Butterfly",
           "description": "En World App",
-          "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1",
+          "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32",
           "icon": "bird",
           "status": "reviewing"
         },
         {
           "title": "World Runner Arcade Game",
           "description": "En World App",
-          "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c",
+          "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5",
           "icon": "footprints",
           "status": "reviewing"
         }
@@ -101,7 +101,7 @@
       "icon": "gamepad-2",
       "accent": "#facc15",
       "image": "",
-      "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3&path=&draft_id=meta_97372caabf92d72fac6d1f051da854c0"
+      "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3"
     },
     {
       "title": "World Runner Arcade Game",
@@ -109,7 +109,7 @@
       "icon": "footprints",
       "accent": "#a855f7",
       "image": "",
-      "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5&path=&draft_id=meta_65071d486131bca6b66ad2e1ef03975c"
+      "url": "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5"
     },
     {
       "title": "Flappy Butterfly",
@@ -117,7 +117,7 @@
       "icon": "bird",
       "accent": "#18e0a0",
       "image": "",
-      "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32&path=&draft_id=meta_98046c2869ebff428e582ad1d0d37da1"
+      "url": "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32"
     },
     {
       "title": "Siguenos en X",
@@ -131,7 +131,7 @@
   "nft": {
     "title": "RCOL Protocol Genesis",
     "tagline": "NFT de utilidad",
-    "description": "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge oficial y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
+    "description": "Coleccion de 100 NFT unicos. Cada Genesis es tu llave de holder verificado: desbloquea ventajas en los juegos RCOL, badge en el hub y airdrops exclusivos. Mientras mas baja la edicion, mayores los beneficios.",
     "image": "./assets/nft-genesis.png",
     "supply": 100,
     "minted": 0,
@@ -148,7 +148,7 @@
       {
         "icon": "badge-check",
         "title": "Holder verificado",
-        "description": "Badge oficial en el hub que identifica tu wallet como holder Genesis."
+        "description": "Badge en el hub que identifica tu wallet como holder Genesis."
       },
       {
         "icon": "gift",

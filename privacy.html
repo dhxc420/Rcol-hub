@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080704" />
+    <title>Politica de privacidad — RCOL Hub</title>
+    <link rel="icon" href="./assets/rcol-hub.ico" />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 16px 48px;
+        background: var(--bg, #080704);
+        color: var(--text, #f5f0e6);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        line-height: 1.55;
+      }
+      .privacy-shell {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .privacy-shell h1 {
+        font-size: 1.6rem;
+        margin: 0 0 8px;
+        color: var(--gold-bright, #f8d66d);
+      }
+      .privacy-shell h2 {
+        font-size: 1.05rem;
+        margin: 24px 0 8px;
+      }
+      .privacy-shell p,
+      .privacy-shell li {
+        color: var(--muted, #c9bfb0);
+        font-size: 0.95rem;
+      }
+      .privacy-shell ul {
+        padding-left: 1.2rem;
+      }
+      .privacy-shell a {
+        color: var(--gold-bright, #f8d66d);
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 20px;
+        color: var(--gold-bright, #f8d66d);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="privacy-shell">
+      <a class="back-link" href="./index.html">&larr; Volver a RCOL Hub</a>
+      <h1>Politica de privacidad</h1>
+      <p><strong>Ultima actualizacion:</strong> 27 de junio de 2026</p>
+
+      <h2>1. Informacion que recopilamos</h2>
+      <p><strong>Datos automaticos (hosting):</strong> IP, User-Agent, tipo de dispositivo y timestamps en logs de Vercel.</p>
+      <p><strong>En World App:</strong></p>
+      <ul>
+        <li><strong>Wallet:</strong> direccion publica y @username via MiniKit para saldos y swaps. No la guardamos en servidor.</li>
+        <li><strong>World ID:</strong> prueba criptografica enviada a la API de Worldcoin para validacion. Sin datos biometricos.</li>
+        <li><strong>Sesion:</strong> flag local en <code>sessionStorage</code> (<code>rcol-world-id-verified</code>) hasta cerrar la pestana.</li>
+      </ul>
+      <p><strong>No almacenamos en servidor:</strong> historial de navegacion, cookies publicitarias, email, claves privadas ni historial de txs (se lee on-chain en tu dispositivo).</p>
+
+      <h2>2. Uso de la informacion</h2>
+      <ul>
+        <li>Mostrar mercado, saldos y swaps que firmas con tu wallet</li>
+        <li>Verificar humanidad con World ID cuando lo solicitas</li>
+        <li>Diagnosticar errores y prevenir abuso</li>
+      </ul>
+
+      <h2>3. Worldcoin</h2>
+      <p>RCOL Hub es una mini app de <strong>terceros</strong>, no desarrollada por Worldcoin. Usamos MiniKit e IDKit. Politica de World: <a href="https://world.org/privacy" target="_blank" rel="noreferrer">world.org/privacy</a></p>
+
+      <h2>4. Terceros</h2>
+      <p>PUF, Uniswap v2, DexScreener, GeckoTerminal, Alchemy RPC — cada uno con su propia politica.</p>
+
+      <h2>5. Seguridad</h2>
+      <p>HTTPS, CSP y HSTS. La clave de firma World ID solo vive en el servidor Vercel.</p>
+
+      <h2>6. Contacto</h2>
+      <p>
+        <a href="https://t.me/updatesDzc" target="_blank" rel="noreferrer">Telegram</a> ·
+        <a href="https://x.com/Rcol_Oficial" target="_blank" rel="noreferrer">X</a> ·
+        <a href="https://dhxc420.github.io/Rcol.fun/" target="_blank" rel="noreferrer">rcol.fun</a>
+      </p>
+      <p><em>RCOLombia DAO · RCOL Hub</em></p>
+    </div>
+  </body>
+</html>

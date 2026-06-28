@@ -55,10 +55,6 @@
             <span class="dot"></span>
             <span>Comprobando World App</span>
           </span>
-          <button class="world-verify-btn" id="worldIdVerify" type="button" hidden>
-            <i data-lucide="badge-check" aria-hidden="true"></i>
-            <span>Verificar con World ID</span>
-          </button>
         </section>
 
         <section class="intro">
@@ -343,6 +339,22 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="worldid-modal" id="worldIdModal" hidden role="dialog" aria-modal="true" aria-labelledby="worldIdModalTitle">
+      <div class="worldid-modal__backdrop" data-worldid-dismiss></div>
+      <div class="worldid-modal__card">
+        <div class="worldid-modal__icon" aria-hidden="true">
+          <i data-lucide="badge-check"></i>
+        </div>
+        <h2 id="worldIdModalTitle">Verifica tu humanidad</h2>
+        <p class="worldid-modal__text">RCOL Hub es para humanos verificados. Confirma con World ID para acceder al hub de la comunidad RCOL.</p>
+        <button class="worldid-modal__cta" id="worldIdModalVerify" type="button">
+          <i data-lucide="badge-check" aria-hidden="true"></i>
+          <span>Verificar con World ID</span>
+        </button>
+        <button class="worldid-modal__skip" id="worldIdModalSkip" type="button" data-worldid-dismiss>Ahora no</button>
+      </div>
+    </div>
 
     <div class="nft-modal" id="nftModal" hidden role="dialog" aria-modal="true" aria-labelledby="nftModalName">
       <div class="nft-modal__backdrop" data-close></div>

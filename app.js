@@ -1,5 +1,6 @@
 const CONFIG_URL = "./config.json";
 const WORLD_ID_STORAGE_KEY = "rcol-world-id-verified";
+const WORLD_ID_MODAL_DISMISS_KEY = "rcol-world-id-modal-dismissed";
 const ADDRESS_BOOK = "0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D";
 const ADDRESS_BOOK_SELECTOR = "0x47e7ef24"; // addressVerifiedUntil(address)
 
@@ -863,6 +864,70 @@ function updateWorldStatus(installResult) {
 
 let worldIdVerified = false;
 let worldIdBusy = false;
+let previewIdentity = null; // { address, username } from MiniKit before walletAuth
+
+async function resolveMiniKitIdentity() {
+  if (!MiniKitApi) return null;
+
+  let address = MiniKitApi.user?.walletAddress;
+  let username = MiniKitApi.user?.username;
+
+  for (let attempt = 0; attempt < 4 && !address; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 280));
+    address = MiniKitApi.user?.walletAddress;
+    username = MiniKitApi.user?.username;
+  }
+
+  if (!address && typeof MiniKitApi.getUserInfo === "function") {
+    try {
+      const info = await MiniKitApi.getUserInfo();
+      address = info?.walletAddress ?? info?.address;
+      username = username ?? info?.username;
+    } catch {}
+  }
+
+  if (address && !username && typeof MiniKitApi.getUserByAddress === "function") {
+    try {
+      const user = await MiniKitApi.getUserByAddress(address);
+      username = user?.username;
+    } catch {}
+  }
+
+  if (!address) return null;
+  return { address, username: username || null };
+}
+
+async function syncOrbVerification() {
+  if (readSessionVerified()) {
+    worldIdVerified = true;
+    hideWorldIdModal();
+    renderWorldIdStatus();
+    return true;
+  }
+
+  const identity = walletState || previewIdentity || (await resolveMiniKitIdentity());
+  if (identity && !walletState) previewIdentity = identity;
+
+  const address = walletState?.address || previewIdentity?.address;
+  if (!address) {
+    worldIdVerified = false;
+    renderWorldIdStatus();
+    return false;
+  }
+
+  const orb = await checkOrbVerified(address);
+  worldIdVerified = orb;
+  if (orb) {
+    writeSessionVerified(true);
+    hideWorldIdModal();
+  }
+  renderWorldIdStatus();
+  return orb;
+}
+
+async function refreshWorldIdStatus() {
+  return syncOrbVerification();
+}
 
 function readSessionVerified() {
   try {
@@ -895,25 +960,8 @@ async function checkOrbVerified(address) {
   }
 }
 
-async function refreshWorldIdStatus() {
-  if (readSessionVerified()) {
-    worldIdVerified = true;
-    renderWorldIdStatus();
-    return true;
-  }
-  if (walletState?.address) {
-    worldIdVerified = await checkOrbVerified(walletState.address);
-    if (worldIdVerified) writeSessionVerified(true);
-  } else {
-    worldIdVerified = false;
-  }
-  renderWorldIdStatus();
-  return worldIdVerified;
-}
-
 function renderWorldIdStatus() {
   const status = document.querySelector("#worldStatus");
-  const verifyBtn = document.querySelector("#worldIdVerify");
   if (!status) return;
 
   status.classList.toggle("is-ready", worldAppReady);
@@ -925,19 +973,51 @@ function renderWorldIdStatus() {
   if (!worldAppReady) {
     label.textContent = "Modo navegador";
   } else if (worldIdVerified) {
-    label.textContent = "Humano verificado";
+    const user = walletState?.username || previewIdentity?.username;
+    label.textContent = user ? `Humano verificado · @${user}` : "Humano verificado";
   } else {
     label.textContent = "World App detectado";
   }
 
-  if (verifyBtn) {
-    const showVerify = worldAppReady && !worldIdVerified;
-    verifyBtn.hidden = !showVerify;
-    verifyBtn.classList.toggle("is-busy", worldIdBusy);
-    verifyBtn.querySelector("span").textContent = worldIdBusy
+  const modalCta = document.querySelector("#worldIdModalVerify");
+  if (modalCta) {
+    modalCta.classList.toggle("is-busy", worldIdBusy);
+    modalCta.querySelector("span").textContent = worldIdBusy
       ? "Verificando..."
       : "Verificar con World ID";
   }
+}
+
+function showWorldIdModal() {
+  const modal = document.querySelector("#worldIdModal");
+  if (!modal) return;
+  modal.hidden = false;
+  window.lucide?.createIcons?.();
+}
+
+function hideWorldIdModal() {
+  document.querySelector("#worldIdModal")?.setAttribute("hidden", "");
+}
+
+function dismissWorldIdModalForSession() {
+  try {
+    sessionStorage.setItem(WORLD_ID_MODAL_DISMISS_KEY, "1");
+  } catch {}
+  hideWorldIdModal();
+}
+
+function readModalDismissed() {
+  try {
+    return sessionStorage.getItem(WORLD_ID_MODAL_DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+async function maybeShowWorldIdModal() {
+  if (!worldAppReady || readModalDismissed()) return;
+  if (await syncOrbVerification()) return;
+  showWorldIdModal();
 }
 
 async function verifyWithWorldId() {
@@ -976,7 +1056,7 @@ async function verifyWithWorldId() {
     }
 
     const { IDKit, orbLegacy } = await import("https://cdn.jsdelivr.net/npm/@worldcoin/idkit-core@4.2.0/+esm");
-    const signal = walletState?.address || `rcol-hub-${Date.now()}`;
+    const signal = walletState?.address || previewIdentity?.address || `rcol-hub-${Date.now()}`;
 
     const request = await IDKit.request({
       app_id: appId,
@@ -1006,6 +1086,7 @@ async function verifyWithWorldId() {
 
     worldIdVerified = true;
     writeSessionVerified(true);
+    hideWorldIdModal();
     showToast("Humano verificado con World ID");
     renderWorldIdStatus();
     return true;
@@ -1022,7 +1103,14 @@ async function verifyWithWorldId() {
 }
 
 function setupWorldId() {
-  document.querySelector("#worldIdVerify")?.addEventListener("click", verifyWithWorldId);
+  const modal = document.querySelector("#worldIdModal");
+  document.querySelector("#worldIdModalVerify")?.addEventListener("click", verifyWithWorldId);
+  document.querySelector("#worldIdModalSkip")?.addEventListener("click", dismissWorldIdModalForSession);
+  modal?.querySelectorAll("[data-worldid-dismiss]").forEach((el) => {
+    el.addEventListener("click", (event) => {
+      if (event.target === el) dismissWorldIdModalForSession();
+    });
+  });
   worldIdVerified = readSessionVerified();
   renderWorldIdStatus();
 }
@@ -1082,7 +1170,8 @@ async function connectWallet() {
     renderWallet();
     updateSwapBalance();
     if (!document.querySelector("#swapView")?.hidden) renderSwapView();
-    await refreshWorldIdStatus();
+    await syncOrbVerification();
+    if (!worldIdVerified && !readModalDismissed()) showWorldIdModal();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
     return true;
   } catch (error) {
@@ -2183,6 +2272,7 @@ async function boot() {
   const [config, installResult] = await Promise.all([loadConfig(), loadMiniKit()]);
   applyConfig(config);
   updateWorldStatus(installResult);
+  await maybeShowWorldIdModal();
 
   document.querySelector("#copyToken").addEventListener("click", () => copyToken(config));
   document.querySelector("#shareButton").addEventListener("click", () => shareApp(config));

@@ -365,9 +365,17 @@ html[data-theme="dark"] #themeToggle .icon-moon {
   position: fixed;
   inset: 0;
   z-index: 120;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .worldid-modal {
+    align-items: center;
+    padding: 16px;
+  }
 }
 
 .worldid-modal[hidden] {
@@ -377,91 +385,152 @@ html[data-theme="dark"] #themeToggle .icon-moon {
 .worldid-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
 }
 
-.worldid-modal__card {
+.worldid-modal__sheet {
   position: relative;
-  width: min(100%, 360px);
-  padding: 28px 22px 22px;
-  border-radius: 24px;
-  border: 1px solid rgba(248, 214, 109, 0.28);
-  background: linear-gradient(165deg, rgba(28, 22, 12, 0.98), rgba(12, 10, 8, 0.98));
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  width: 100%;
+  max-width: 24rem;
+  overflow: hidden;
+  border-radius: 28px 28px 0 0;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-bottom: 0;
+  background: linear-gradient(180deg, #fffdf7 0%, #fff 45%, #fff8eb 100%);
+  box-shadow: 0 -8px 40px rgba(245, 179, 1, 0.25);
+  padding: 32px 24px 24px;
   text-align: center;
 }
 
-html[data-theme="light"] .worldid-modal__card {
-  background: linear-gradient(165deg, #fffdf6, #f5efe3);
-  border-color: rgba(180, 140, 40, 0.25);
+@media (min-width: 640px) {
+  .worldid-modal__sheet {
+    border-radius: 28px;
+    border-bottom: 1px solid rgba(251, 191, 36, 0.35);
+  }
 }
 
-.worldid-modal__icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 14px;
+.worldid-modal__sheet::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8rem;
+  background: radial-gradient(80% 100% at 50% 0%, rgba(245, 179, 1, 0.35) 0%, transparent 70%);
+  opacity: 0.6;
+}
+
+.worldid-modal__coin-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+}
+
+.worldid-modal__coin {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(245, 179, 1, 0.45);
+}
+
+.worldid-modal__sheet h2 {
+  position: relative;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.worldid-modal__subtitle {
+  position: relative;
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.worldid-modal__divider {
+  position: relative;
+  height: 1px;
+  margin: 20px 0;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.8), transparent);
+}
+
+.worldid-modal__body {
+  position: relative;
+  margin: 0;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.worldid-modal__permission {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid #fef3c7;
+  background: rgba(255, 251, 235, 0.6);
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.worldid-modal__check {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(248, 214, 109, 0.14);
-  color: var(--gold-bright);
-}
-
-.worldid-modal__icon svg {
-  width: 28px;
-  height: 28px;
-}
-
-.worldid-modal__card h2 {
-  margin: 0 0 10px;
-  font-size: 1.25rem;
-  color: var(--text);
-}
-
-.worldid-modal__text {
-  margin: 0 0 20px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.45;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
 }
 
 .worldid-modal__cta {
+  position: relative;
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
+  margin-top: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f8d66d, #d4a017);
-  color: #1a1208;
-  font-weight: 800;
-  font-size: 0.95rem;
+  background: #111827;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.2);
 }
 
 .worldid-modal__cta.is-busy {
-  opacity: 0.72;
+  opacity: 0.6;
   pointer-events: none;
 }
 
-.worldid-modal__cta svg {
-  width: 18px;
-  height: 18px;
+.worldid-modal__hint {
+  position: relative;
+  margin: 12px 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: #9ca3af;
 }
 
-.worldid-modal__skip {
-  margin-top: 12px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+body.is-humanity-locked .app-shell {
+  pointer-events: none;
+  user-select: none;
+}
+
+body.is-humanity-locked .worldid-modal {
+  pointer-events: auto;
 }
 
 .legal-links {

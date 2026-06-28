@@ -1,6 +1,6 @@
 const CONFIG_URL = "./config.json";
 const WORLD_ID_STORAGE_KEY = "rcol-world-id-verified";
-const WORLD_ID_MODAL_DISMISS_KEY = "rcol-world-id-modal-dismissed";
+const WORLD_ID_NULLIFIER_KEY = "rcol-world-id-nullifier";
 const ADDRESS_BOOK = "0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D";
 const ADDRESS_BOOK_SELECTOR = "0x47e7ef24"; // addressVerifiedUntil(address)
 
@@ -20,7 +20,7 @@ const RCOL_POOL = "0xe5f1c6b95cf182b09807b73f21f622fae08dd439"; // pool Uniswap 
 const GECKO_OHLCV_API = `https://api.geckoterminal.com/api/v2/networks/world-chain/pools/${RCOL_POOL}/ohlcv/hour?aggregate=1&limit=24`;
 
 const SWAP_TOKENS = [
-  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18, logo: "./assets/rcol-coin.webp" },
+  { symbol: "RCOL", name: "RCOL", address: RCOL_ADDRESS, decimals: 18, logo: "./assets/rcol-coin.png" },
   { symbol: "WLD", name: "Worldcoin", address: WLD_ADDRESS, decimals: 18, logo: "./assets/token-wld.png" },
   { symbol: "USDC", name: "USD Coin", address: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1", decimals: 6, logo: "./assets/token-usdc.png" },
   { symbol: "WETH", name: "Ethereum", address: "0x4200000000000000000000000000000000000006", decimals: 18, logo: "./assets/token-weth.png" }
@@ -858,6 +858,7 @@ async function shareApp(config) {
 function updateWorldStatus(installResult) {
   worldAppReady = Boolean(window.WorldApp) || Boolean(installResult?.success);
   renderWorldIdStatus();
+  updateHumanityGate();
 }
 
 /* ---------- World ID (IDKit + Address Book) ---------- */
@@ -922,6 +923,7 @@ async function syncOrbVerification() {
     hideWorldIdModal();
   }
   renderWorldIdStatus();
+  updateHumanityGate();
   return orb;
 }
 
@@ -931,7 +933,8 @@ async function refreshWorldIdStatus() {
 
 function readSessionVerified() {
   try {
-    return sessionStorage.getItem(WORLD_ID_STORAGE_KEY) === "1";
+    if (sessionStorage.getItem(WORLD_ID_STORAGE_KEY) === "1") return true;
+    return Boolean(sessionStorage.getItem(WORLD_ID_NULLIFIER_KEY));
   } catch {
     return false;
   }
@@ -940,8 +943,26 @@ function readSessionVerified() {
 function writeSessionVerified(value) {
   try {
     if (value) sessionStorage.setItem(WORLD_ID_STORAGE_KEY, "1");
-    else sessionStorage.removeItem(WORLD_ID_STORAGE_KEY);
+    else {
+      sessionStorage.removeItem(WORLD_ID_STORAGE_KEY);
+      sessionStorage.removeItem(WORLD_ID_NULLIFIER_KEY);
+    }
   } catch {}
+}
+
+function storeNullifier(nullifier) {
+  if (!nullifier) return;
+  try {
+    sessionStorage.setItem(WORLD_ID_NULLIFIER_KEY, nullifier);
+  } catch {}
+}
+
+function updateHumanityGate() {
+  const shell = document.querySelector(".app-shell");
+  if (!shell) return;
+  const locked = worldAppReady && !worldIdVerified;
+  shell.classList.toggle("is-humanity-locked", locked);
+  document.body.classList.toggle("is-humanity-locked", locked);
 }
 
 async function checkOrbVerified(address) {
@@ -979,13 +1000,12 @@ function renderWorldIdStatus() {
     label.textContent = "World App detectado";
   }
 
-  const modalCta = document.querySelector("#worldIdModalVerify");
+  const modalCta = document.querySelector("#worldIdModalApprove");
   if (modalCta) {
     modalCta.classList.toggle("is-busy", worldIdBusy);
-    modalCta.querySelector("span").textContent = worldIdBusy
-      ? "Verificando..."
-      : "Verificar con World ID";
+    modalCta.querySelector("span").textContent = worldIdBusy ? "Verificando..." : "Aprobar";
   }
+  updateHumanityGate();
 }
 
 function showWorldIdModal() {
@@ -999,35 +1019,34 @@ function hideWorldIdModal() {
   document.querySelector("#worldIdModal")?.setAttribute("hidden", "");
 }
 
-function dismissWorldIdModalForSession() {
-  try {
-    sessionStorage.setItem(WORLD_ID_MODAL_DISMISS_KEY, "1");
-  } catch {}
-  hideWorldIdModal();
-}
-
-function readModalDismissed() {
-  try {
-    return sessionStorage.getItem(WORLD_ID_MODAL_DISMISS_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 async function maybeShowWorldIdModal() {
-  if (!worldAppReady || readModalDismissed()) return;
-  if (await syncOrbVerification()) return;
+  if (!worldAppReady) return;
+  if (await syncOrbVerification()) {
+    updateHumanityGate();
+    return;
+  }
   showWorldIdModal();
+  updateHumanityGate();
 }
 
-async function verifyWithWorldId() {
+async function onHumanityVerified(nullifier) {
+  if (nullifier) storeNullifier(nullifier);
+  worldIdVerified = true;
+  writeSessionVerified(true);
+  hideWorldIdModal();
+  renderWorldIdStatus();
+  if (!walletState) await connectWallet();
+  showToast("Humano verificado con World ID");
+}
+
+async function launchWorldId() {
   const config = activeConfig || fallbackConfig;
   if (!worldAppReady) {
     showToast("Abre RCOL Hub en World App para verificar");
     return false;
   }
   if (worldIdVerified) {
-    showToast("Ya estas verificado");
+    hideWorldIdModal();
     return true;
   }
   if (worldIdBusy) return false;
@@ -1044,14 +1063,16 @@ async function verifyWithWorldId() {
   renderWorldIdStatus();
 
   try {
-    const sigRes = await fetch("/api/rp-signature", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action })
-    });
-    const rpSig = await sigRes.json();
+    const sigRes = await fetch(`/api/world-id/sign?action=${encodeURIComponent(action)}`);
+    const signBody = await sigRes.json();
     if (!sigRes.ok) {
-      showToast(rpSig.error || "Firma World ID no disponible");
+      showToast(signBody.error || "Firma World ID no disponible");
+      return false;
+    }
+
+    const rpContext = signBody.rp_context;
+    if (!rpContext?.signature) {
+      showToast("Firma World ID invalida");
       return false;
     }
 
@@ -1061,40 +1082,35 @@ async function verifyWithWorldId() {
     const request = await IDKit.request({
       app_id: appId,
       action,
-      rp_context: {
-        rp_id: rpId,
-        nonce: rpSig.nonce,
-        created_at: rpSig.created_at,
-        expires_at: rpSig.expires_at,
-        signature: rpSig.sig
-      },
+      rp_context: rpContext,
       allow_legacy_proofs: true,
       environment: "production"
     }).preset(orbLegacy({ signal }));
 
     const result = await request.pollUntilCompletion();
 
-    const verifyRes = await fetch("/api/verify-proof", {
+    const verifyRes = await fetch("/api/world-id/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ rp_id: rpId, idkitResponse: result })
+      body: JSON.stringify(result)
     });
-    if (!verifyRes.ok) {
-      const err = await verifyRes.json().catch(() => ({}));
-      throw new Error(err.error || "Verificacion rechazada");
+    const verifyBody = await verifyRes.json().catch(() => ({}));
+    if (!verifyRes.ok || !verifyBody.success) {
+      throw new Error(verifyBody.error || "Verificacion rechazada");
     }
 
-    worldIdVerified = true;
-    writeSessionVerified(true);
-    hideWorldIdModal();
-    showToast("Humano verificado con World ID");
-    renderWorldIdStatus();
+    const nullifier = verifyBody.nullifiers?.[0] || "verified";
+    await onHumanityVerified(nullifier);
     return true;
   } catch (error) {
     console.error("World ID verify error:", error);
     const message = error?.message || String(error);
-    if (/reject|cancel|denied|closed/i.test(message)) showToast("Verificacion cancelada");
-    else showToast("No se pudo verificar. Intenta de nuevo.");
+    if (/reject|cancel|denied|closed|user_rejected/i.test(message)) {
+      showToast("Verificacion cancelada");
+    } else {
+      showToast("No se pudo verificar. Intenta de nuevo.");
+    }
+    if (worldAppReady && !worldIdVerified) showWorldIdModal();
     return false;
   } finally {
     worldIdBusy = false;
@@ -1103,16 +1119,10 @@ async function verifyWithWorldId() {
 }
 
 function setupWorldId() {
-  const modal = document.querySelector("#worldIdModal");
-  document.querySelector("#worldIdModalVerify")?.addEventListener("click", verifyWithWorldId);
-  document.querySelector("#worldIdModalSkip")?.addEventListener("click", dismissWorldIdModalForSession);
-  modal?.querySelectorAll("[data-worldid-dismiss]").forEach((el) => {
-    el.addEventListener("click", (event) => {
-      if (event.target === el) dismissWorldIdModalForSession();
-    });
-  });
+  document.querySelector("#worldIdModalApprove")?.addEventListener("click", launchWorldId);
   worldIdVerified = readSessionVerified();
   renderWorldIdStatus();
+  updateHumanityGate();
 }
 
 /* ---------- Wallet del usuario (nombre + saldo) ---------- */
@@ -1171,7 +1181,7 @@ async function connectWallet() {
     updateSwapBalance();
     if (!document.querySelector("#swapView")?.hidden) renderSwapView();
     await syncOrbVerification();
-    if (!worldIdVerified && !readModalDismissed()) showWorldIdModal();
+    if (!worldIdVerified) showWorldIdModal();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
     return true;
   } catch (error) {

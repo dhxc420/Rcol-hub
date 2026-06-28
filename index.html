@@ -341,18 +341,26 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <div class="worldid-modal" id="worldIdModal" hidden role="dialog" aria-modal="true" aria-labelledby="worldIdModalTitle">
-      <div class="worldid-modal__backdrop" data-worldid-dismiss></div>
-      <div class="worldid-modal__card">
-        <div class="worldid-modal__icon" aria-hidden="true">
-          <i data-lucide="badge-check"></i>
-        </div>
-        <h2 id="worldIdModalTitle">Verifica tu humanidad</h2>
-        <p class="worldid-modal__text">RCOL Hub es para humanos verificados. Confirma con World ID para acceder al hub de la comunidad RCOL.</p>
-        <button class="worldid-modal__cta" id="worldIdModalVerify" type="button">
-          <i data-lucide="badge-check" aria-hidden="true"></i>
-          <span>Verificar con World ID</span>
+      <div class="worldid-modal__backdrop"></div>
+      <div class="worldid-modal__sheet">
+        <button class="worldid-modal__close" id="worldIdModalClose" type="button" aria-label="Cerrar" hidden>
+          <span aria-hidden="true">&times;</span>
         </button>
-        <button class="worldid-modal__skip" id="worldIdModalSkip" type="button" data-worldid-dismiss>Ahora no</button>
+        <div class="worldid-modal__coin-wrap" aria-hidden="true">
+          <img class="worldid-modal__coin" src="./assets/rcol-coin.png" alt="" />
+        </div>
+        <h2 id="worldIdModalTitle">Completar la verificacion</h2>
+        <p class="worldid-modal__subtitle">a RCOL Hub</p>
+        <div class="worldid-modal__divider" aria-hidden="true"></div>
+        <p class="worldid-modal__body">La app verificara que eres</p>
+        <div class="worldid-modal__permission">
+          <span class="worldid-modal__check" aria-hidden="true">&#10003;</span>
+          <span>Ser humano unico</span>
+        </div>
+        <button class="worldid-modal__cta" id="worldIdModalApprove" type="button">
+          <span>Aprobar</span>
+        </button>
+        <p class="worldid-modal__hint">Despues World App te pedira confirmar — tu privacidad queda protegida.</p>
       </div>
     </div>
 

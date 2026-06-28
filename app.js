@@ -453,7 +453,11 @@ async function loadMiniKit() {
 
     const mod = await import("https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@2.0.3/+esm");
     MiniKitApi = mod.MiniKit;
-    return MiniKitApi?.install?.();
+    const installResult = await MiniKitApi?.install?.();
+    if (MiniKitApi && typeof window !== "undefined") {
+      window.MiniKit = MiniKitApi;
+    }
+    return installResult;
   } catch {
     return { success: false };
   }
@@ -906,6 +910,13 @@ async function syncOrbVerification() {
     return true;
   }
 
+  // En World App la entrada exige prueba World ID (accion rcol-hub-access), no solo Address Book.
+  if (worldAppReady) {
+    worldIdVerified = false;
+    renderWorldIdStatus();
+    return false;
+  }
+
   const identity = walletState || previewIdentity || (await resolveMiniKitIdentity());
   if (identity && !walletState) previewIdentity = identity;
 
@@ -1012,11 +1023,17 @@ function showWorldIdModal() {
   const modal = document.querySelector("#worldIdModal");
   if (!modal) return;
   modal.hidden = false;
+  document.body.classList.remove("is-worldid-native");
   window.lucide?.createIcons?.();
 }
 
 function hideWorldIdModal() {
   document.querySelector("#worldIdModal")?.setAttribute("hidden", "");
+  document.body.classList.remove("is-worldid-native");
+}
+
+function showWorldIdVerifyingOverlay() {
+  document.body.classList.add("is-worldid-native");
 }
 
 async function maybeShowWorldIdModal() {
@@ -1076,6 +1093,10 @@ async function launchWorldId() {
       return false;
     }
 
+    // Ocultar modal antes del flujo nativo de World App (como Vuela RCOL).
+    hideWorldIdModal();
+    showWorldIdVerifyingOverlay();
+
     const { IDKit, orbLegacy } = await import("https://cdn.jsdelivr.net/npm/@worldcoin/idkit-core@4.2.0/+esm");
     const signal = walletState?.address || previewIdentity?.address || `rcol-hub-${Date.now()}`;
 
@@ -1087,12 +1108,15 @@ async function launchWorldId() {
       environment: "production"
     }).preset(orbLegacy({ signal }));
 
-    const result = await request.pollUntilCompletion();
+    const completion = await request.pollUntilCompletion({ timeout: 120_000 });
+    if (!completion?.success || !completion?.result) {
+      throw new Error(completion?.error || "verification_failed");
+    }
 
     const verifyRes = await fetch("/api/world-id/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(result)
+      body: JSON.stringify(completion.result)
     });
     const verifyBody = await verifyRes.json().catch(() => ({}));
     if (!verifyRes.ok || !verifyBody.success) {
@@ -1104,6 +1128,7 @@ async function launchWorldId() {
     return true;
   } catch (error) {
     console.error("World ID verify error:", error);
+    document.body.classList.remove("is-worldid-native");
     const message = error?.message || String(error);
     if (/reject|cancel|denied|closed|user_rejected/i.test(message)) {
       showToast("Verificacion cancelada");
@@ -1113,6 +1138,7 @@ async function launchWorldId() {
     if (worldAppReady && !worldIdVerified) showWorldIdModal();
     return false;
   } finally {
+    document.body.classList.remove("is-worldid-native");
     worldIdBusy = false;
     renderWorldIdStatus();
   }

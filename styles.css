@@ -525,12 +525,32 @@ html[data-theme="dark"] #themeToggle .icon-moon {
 }
 
 body.is-humanity-locked .app-shell {
+  visibility: hidden;
   pointer-events: none;
   user-select: none;
 }
 
 body.is-humanity-locked .worldid-modal {
   pointer-events: auto;
+}
+
+body.is-worldid-native .worldid-modal {
+  display: none;
+}
+
+body.is-worldid-native::after {
+  content: "Verificando con World ID…";
+  position: fixed;
+  inset: 0;
+  z-index: 119;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
 }
 
 .legal-links {

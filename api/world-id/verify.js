@@ -8,10 +8,15 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: "RP no configurado" });
   }
 
-  let proof;
-  try {
-    proof = req.body;
-  } catch {
+  let proof = req.body;
+  if (typeof proof === "string") {
+    try {
+      proof = JSON.parse(proof);
+    } catch {
+      return res.status(400).json({ error: "Cuerpo invalido" });
+    }
+  }
+  if (!proof || typeof proof !== "object") {
     return res.status(400).json({ error: "Cuerpo invalido" });
   }
 

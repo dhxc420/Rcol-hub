@@ -1,5 +1,4 @@
 const CONFIG_URL = "./config.json";
-const IDKIT_CORE_URL = "./vendor/idkit-core/index.js";
 const WORLD_ID_STORAGE_KEY = "rcol-world-id-verified";
 const WORLD_ID_NULLIFIER_KEY = "rcol-world-id-nullifier";
 const ADDRESS_BOOK = "0x57b930D551e677CC36e2fA036Ae2fe8FdaE0330D";
@@ -468,19 +467,17 @@ async function loadMiniKit(appId) {
 async function ensureMiniKitReady(appId) {
   if (!MiniKitApi) {
     await loadMiniKit(appId);
-  } else if (appId && MiniKitApi.appId !== appId) {
+  } else if (appId) {
     await MiniKitApi.install(appId);
   } else if (!MiniKitApi.isInstalled?.()) {
-    await MiniKitApi.install(appId || undefined);
+    await MiniKitApi.install(undefined);
   }
-  return Boolean(MiniKitApi?.isInstalled?.());
+  return Boolean(window.WorldApp) || Boolean(MiniKitApi?.isInstalled?.());
 }
 
-function worldAppSupportsVerify() {
-  const cmds = window.WorldApp?.supported_commands;
-  if (!Array.isArray(cmds)) return false;
-  const verify = cmds.find((cmd) => cmd.name === "verify");
-  return Boolean(verify?.supported_versions?.length);
+function setWorldIdModalHint(message) {
+  const hint = document.querySelector(".worldid-modal__hint");
+  if (hint) hint.textContent = message;
 }
 
 function worldIdErrorMessage(error) {
@@ -507,12 +504,12 @@ async function loadConfig() {
   }
 }
 
-function showToast(message) {
+function showToast(message, duration = 2200) {
   const toast = document.querySelector("#toast");
   toast.textContent = message;
   toast.classList.add("is-visible");
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
+  showToast.timer = setTimeout(() => toast.classList.remove("is-visible"), duration);
 }
 
 function escapeHtml(value) {
@@ -1058,6 +1055,7 @@ function showWorldIdModal() {
   if (!modal) return;
   modal.hidden = false;
   document.body.classList.remove("is-worldid-native");
+  setWorldIdModalHint("Despues World App te pedira confirmar — tu privacidad queda protegida.");
   window.lucide?.createIcons?.();
 }
 
@@ -1109,71 +1107,43 @@ async function launchWorldId() {
     showToast("World ID no configurado");
     return false;
   }
-  if (!worldAppSupportsVerify()) {
-    showToast("Tu World App no soporta verify. Actualiza la app.");
-    return false;
-  }
 
   worldIdBusy = true;
   renderWorldIdStatus();
 
   try {
-    const ready = await ensureMiniKitReady(appId);
-    if (!ready) {
-      showToast(worldIdErrorMessage("app_out_of_date"));
-      return false;
-    }
+    await ensureMiniKitReady(appId);
 
     const sigRes = await fetch(`/api/world-id/sign?action=${encodeURIComponent(action)}`);
     const signBody = await sigRes.json().catch(() => ({}));
     if (!sigRes.ok) {
-      showToast(signBody.error || "Firma World ID no disponible");
-      return false;
+      throw new Error(signBody.error || "sign_failed");
     }
 
     const rpContext = signBody.rp_context;
     if (!rpContext?.signature) {
-      showToast("Firma World ID invalida");
-      return false;
+      throw new Error("sign_failed");
     }
 
     hideWorldIdModal();
     showWorldIdVerifyingOverlay();
 
-    const { IDKit, orbLegacy } = await import(IDKIT_CORE_URL);
-    const signal = walletState?.address || previewIdentity?.address || `rcol-hub-${Date.now()}`;
-
-    const builder = IDKit.request({
-      app_id: appId,
+    const { runWorldIdVerify } = await import("./world-id-widget.js");
+    const nullifier = await runWorldIdVerify({
+      appId,
       action,
-      rp_context: rpContext,
-      allow_legacy_proofs: true,
-      environment: "production"
+      rpContext,
+      signal: walletState?.address || previewIdentity?.address || ""
     });
-    const request = await builder.preset(orbLegacy({ signal }));
 
-    const completion = await request.pollUntilCompletion({ timeout: 120_000 });
-    if (!completion?.success || !completion?.result) {
-      throw new Error(completion?.error || "verification_failed");
-    }
-
-    const verifyRes = await fetch("/api/world-id/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(completion.result)
-    });
-    const verifyBody = await verifyRes.json().catch(() => ({}));
-    if (!verifyRes.ok || !verifyBody.success) {
-      throw new Error(verifyBody.error || verifyBody.detail || "verification_failed");
-    }
-
-    const nullifier = verifyBody.nullifiers?.[0] || "verified";
     await onHumanityVerified(nullifier);
     return true;
   } catch (error) {
     console.error("World ID verify error:", error);
     document.body.classList.remove("is-worldid-native");
-    showToast(worldIdErrorMessage(error));
+    const msg = worldIdErrorMessage(error);
+    showToast(msg, 4500);
+    setWorldIdModalHint(msg);
     if (worldAppReady && !worldIdVerified) showWorldIdModal();
     return false;
   } finally {

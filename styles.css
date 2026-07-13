@@ -788,8 +788,22 @@ html[data-theme="light"] .swap-fee {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--accent) 22%, rgba(0, 0, 0, 0.3));
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
+}
+
+.ann-card__icon--image {
+  padding: 0;
+  overflow: hidden;
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.ann-card__icon--image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .ann-card__body {

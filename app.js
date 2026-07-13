@@ -141,7 +141,7 @@ const fallbackConfig = {
     {
       title: "Vuela RCOL",
       subtitle: "Juega ahora en World App",
-      icon: "gamepad-2",
+      icon: "./assets/vuela-rcol-icon.png",
       accent: "#facc15",
       image: "",
       url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3"
@@ -693,6 +693,10 @@ function applyConfig(config) {
   window.lucide?.createIcons?.();
 }
 
+function isImageAsset(value) {
+  return typeof value === "string" && /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(value);
+}
+
 function renderAnnouncements(items) {
   const carousel = document.querySelector("#annCarousel");
   if (!carousel) return;
@@ -707,12 +711,18 @@ function renderAnnouncements(items) {
     .map((item) => {
       const accent = item.accent || "#f8d66d";
       const tag = item.url ? "a" : "button";
-      const hasImage = Boolean(item.image);
-      const media = hasImage
-        ? `<img class="ann-card__img" src="${escapeHtml(item.image)}" alt="" loading="lazy" />`
-        : `<span class="ann-card__icon"><i data-lucide="${escapeHtml(item.icon || "megaphone")}" aria-hidden="true"></i></span>`;
+      const hasBanner = Boolean(item.image);
+      const iconIsImage = isImageAsset(item.icon);
+      let media;
+      if (hasBanner) {
+        media = `<img class="ann-card__img" src="${escapeHtml(item.image)}" alt="" loading="lazy" />`;
+      } else if (iconIsImage) {
+        media = `<span class="ann-card__icon ann-card__icon--image"><img src="${escapeHtml(item.icon)}" alt="" loading="lazy" /></span>`;
+      } else {
+        media = `<span class="ann-card__icon"><i data-lucide="${escapeHtml(item.icon || "megaphone")}" aria-hidden="true"></i></span>`;
+      }
       return `
-        <${tag} class="ann-card${hasImage ? " has-image" : ""}" style="--accent:${accent}"${
+        <${tag} class="ann-card${hasBanner ? " has-image" : ""}" style="--accent:${accent}"${
         item.url ? ` href="${encodeURI(item.url)}" target="_blank" rel="noreferrer"` : ' type="button" data-soon="1"'
       }>
           ${media}

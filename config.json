@@ -98,7 +98,7 @@
     {
       "title": "Vuela RCOL",
       "subtitle": "Juega ahora en World App",
-      "icon": "gamepad-2",
+      "icon": "./assets/vuela-rcol-icon.png",
       "accent": "#facc15",
       "image": "",
       "url": "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3"

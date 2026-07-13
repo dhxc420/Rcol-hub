@@ -66,9 +66,9 @@
 
       <main id="hubView">
         <section class="spotlight" aria-label="Acciones principales">
-          <a class="buy-card buy-card--gold" id="pufCta" href="https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4&path=/token/0x82bf7aa0680d9c2d6ffa77b995e2092fe68d308a" target="_blank" rel="noreferrer">
-            <i data-lucide="coins" aria-hidden="true"></i>
-            <span>Comprar en PUF</span>
+          <a class="buy-card buy-card--gold" id="pufCta" href="https://world.org/mini-app?app_id=app_71ab236862b2a6b92bb663a6ceeda3f2&path=&draft_id=meta_8e90416ea4ab360f84c860bb90fac074" target="_blank" rel="noreferrer">
+            <i data-lucide="landmark" aria-hidden="true"></i>
+            <span>Staking RCOL</span>
           </a>
           <a class="buy-card buy-card--pink" id="swapShortcut" href="#swap">
             <i data-lucide="arrow-left-right" aria-hidden="true"></i>
@@ -245,7 +245,9 @@
         <div class="wallet-card" id="swapWalletCard">
           <div class="wallet-card__top">
             <div class="wallet-card__id">
-              <span class="wallet-card__avatar" id="walletAvatar" aria-hidden="true"></span>
+              <span class="wallet-card__avatar" id="walletAvatar" aria-hidden="true">
+                <img id="walletAvatarImg" alt="" hidden />
+              </span>
               <div class="wallet-card__idtext">
                 <span class="wallet-card__name" id="swapWalletLabel">Tu portafolio RCOL</span>
                 <button class="wallet-card__addr" id="walletAddrCopy" type="button" hidden>
@@ -305,12 +307,43 @@
               <span>Conecta tu wallet</span>
             </button>
             <p class="swap-fee"><i data-lucide="badge-check" aria-hidden="true"></i> 0% de comision del hub &middot; solo red y pool</p>
-            <p class="panel-note">El swap se firma directo en RCOL Hub con tu wallet de World App. RCOL cobra ~2% de impuesto por transferencia, asi que recibes un poco menos.</p>
-            <button class="swap-puf-hint" id="swapPufHint" type="button">
-              <i data-lucide="info" class="swap-puf-hint__info" aria-hidden="true"></i>
-              <span>Tip: en <strong>PUF</strong> la comision es <strong>1%</strong> (la mitad). Si buscas el mejor precio, cambialo alli.</span>
-              <i data-lucide="arrow-up-right" class="swap-puf-hint__go" aria-hidden="true"></i>
+            <p class="swap-tip" id="swapTip">
+              <i data-lucide="info" aria-hidden="true"></i>
+              <span>El swap se firma directo en RCOL Hub con tu wallet de World App. RCOL cobra ~2% de impuesto por transferencia, asi que recibes un poco menos.</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="panel send-panel" id="section-send">
+          <div class="section-heading">
+            <span class="section-label">Wallet</span>
+            <h2>Enviar RCOL</h2>
+          </div>
+          <div class="send-box">
+            <div class="swap-field">
+              <label for="sendTo">Direccion destino</label>
+              <input id="sendTo" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x..." />
+            </div>
+            <div class="swap-field">
+              <div class="swap-field__head">
+                <label for="sendAmount">Cantidad</label>
+                <button class="swap-bal" id="sendMax" type="button" hidden>
+                  Saldo: <span id="sendBalanceVal">0</span> &middot; MAX
+                </button>
+              </div>
+              <div class="swap-row">
+                <input id="sendAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
+                <span class="token-pill" aria-hidden="true">
+                  <img src="./assets/rcol-coin.png" alt="" />
+                  RCOL
+                </span>
+              </div>
+            </div>
+            <button class="swap-cta send-cta" id="sendCta" type="button">
+              <i data-lucide="send" aria-hidden="true"></i>
+              <span>Conecta tu wallet</span>
             </button>
+            <p class="panel-note">Recuerda: RCOL cobra ~2% de impuesto en cada transferencia. El destinatario recibe un poco menos.</p>
           </div>
         </div>
 

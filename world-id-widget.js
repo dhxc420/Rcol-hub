@@ -4,7 +4,7 @@
  */
 import React, { useRef, useState } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-import { IDKitRequestWidget, orbLegacy } from "https://esm.sh/@worldcoin/idkit@4.1.8?deps=react@18.3.1,react-dom@18.3.1";
+import { IDKitRequestWidget, orbLegacy } from "https://esm.sh/@worldcoin/idkit@4.2.0?deps=react@18.3.1,react-dom@18.3.1";
 
 let root = null;
 

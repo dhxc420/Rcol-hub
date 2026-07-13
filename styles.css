@@ -1127,57 +1127,86 @@ html[data-theme="light"] .swap-fee {
   transform: none;
 }
 
-/* Nota de transparencia: PUF como alternativa mas barata */
-.swap-puf-hint {
+/* Tip del swap: impuesto RCOL */
+.swap-tip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
   width: 100%;
-  margin-top: 2px;
+  margin: 8px 0 0;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, #ff1476 28%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--gold-bright, #f8d66d) 28%, var(--line));
   border-radius: 14px;
-  background: color-mix(in srgb, #ff1476 8%, transparent);
-  color: var(--ink);
+  background: color-mix(in srgb, var(--gold-bright, #f8d66d) 8%, transparent);
+  color: var(--muted);
   text-align: left;
   font-size: 0.76rem;
-  line-height: 1.35;
-  cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease;
+  line-height: 1.4;
 }
 
-.swap-puf-hint:active {
-  transform: scale(0.98);
+.swap-tip i {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--gold-bright, #f8d66d);
 }
 
-.swap-puf-hint span {
+.swap-tip span {
   flex: 1;
   min-width: 0;
 }
 
-.swap-puf-hint strong {
-  color: #ff1476;
-  font-weight: 750;
+.send-panel {
+  margin-top: 14px;
 }
 
-html[data-theme="light"] .swap-puf-hint strong {
-  color: #d10a5e;
+.send-box {
+  display: grid;
+  gap: 12px;
 }
 
-.swap-puf-hint__info {
-  flex-shrink: 0;
-  color: #ff1476;
+.send-box .swap-field input[type="text"] {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel, #14110c) 88%, transparent);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-.swap-puf-hint__info,
-.swap-puf-hint__go {
-  width: 16px;
-  height: 16px;
+.send-box .token-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--gold-bright, #f8d66d) 10%, transparent);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.swap-puf-hint__go {
-  flex-shrink: 0;
-  color: var(--muted);
+.send-box .token-pill img {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.send-cta {
+  margin-top: 4px;
+}
+
+/* Nota de transparencia: PUF como alternativa mas barata */
+.swap-puf-hint {
+  display: none;
 }
 
 /* ---------- Vista NFT separada ---------- */
@@ -2279,8 +2308,16 @@ svg {
   width: 42px;
   height: 42px;
   border-radius: 50%;
+  overflow: hidden;
   background: linear-gradient(135deg, #ff1476, #b30cff);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.16);
+}
+
+.wallet-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .wallet-card__idtext {

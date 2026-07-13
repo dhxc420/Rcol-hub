@@ -1,4 +1,4 @@
-export { signRequest } from '@worldcoin/idkit-server';
+export { getSessionCommitment, signRequest } from '@worldcoin/idkit-server';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { hexToBytes, bytesToHex } from '@noble/hashes/utils';
 
@@ -670,7 +670,7 @@ var IDKitInviteCodeRequest = class _IDKitInviteCodeRequest {
    *
    * # Errors
    *
-   * Returns an error if the request has been closed.
+   * Returns an error if the request state is invalid.
    * @returns {string}
    */
   connectUrl() {
@@ -703,7 +703,7 @@ var IDKitInviteCodeRequest = class _IDKitInviteCodeRequest {
    *
    * # Errors
    *
-   * Returns an error if the request has been closed.
+   * Returns an error if the request state is invalid.
    * @returns {number}
    */
   expiresAt() {
@@ -717,6 +717,29 @@ var IDKitInviteCodeRequest = class _IDKitInviteCodeRequest {
         throw takeObject(r2);
       }
       return r0;
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+   * Returns the latest debug report snapshot for this invite-code request.
+   *
+   * # Errors
+   *
+   * Returns an error if report serialization fails.
+   * @returns {any}
+   */
+  getDebugReport() {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.idkitinvitecoderequest_getDebugReport(retptr, this.__wbg_ptr);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return takeObject(r0);
     } finally {
       wasm.__wbindgen_add_to_stack_pointer(16);
     }
@@ -742,7 +765,7 @@ var IDKitInviteCodeRequest = class _IDKitInviteCodeRequest {
    *
    * # Errors
    *
-   * Returns an error if the request has been closed.
+   * Returns an error if the request state is invalid.
    * @returns {string}
    */
   requestId() {
@@ -867,7 +890,7 @@ var IDKitRequest = class _IDKitRequest {
    *
    * # Errors
    *
-   * Returns an error if the request has been closed
+   * Returns an error if the request state is invalid.
    * @returns {string}
    */
   connectUrl() {
@@ -896,6 +919,29 @@ var IDKitRequest = class _IDKitRequest {
     }
   }
   /**
+   * Returns the latest debug report snapshot for this request.
+   *
+   * # Errors
+   *
+   * Returns an error if report serialization fails.
+   * @returns {any}
+   */
+  getDebugReport() {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.idkitrequest_getDebugReport(retptr, this.__wbg_ptr);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return takeObject(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
    * Polls the bridge for the current status (non-blocking)
    *
    * Returns a status object with type:
@@ -918,7 +964,7 @@ var IDKitRequest = class _IDKitRequest {
    *
    * # Errors
    *
-   * Returns an error if the request has been closed
+   * Returns an error if the request state is invalid.
    * @returns {string}
    */
   requestId() {
@@ -1588,7 +1634,7 @@ function __wbg_get_imports() {
           const a = state0.a;
           state0.a = 0;
           try {
-            return __wasm_bindgen_func_elem_1581(a, state0.b, arg02, arg12);
+            return __wasm_bindgen_func_elem_1619(a, state0.b, arg02, arg12);
           } finally {
             state0.a = a;
           }
@@ -1768,11 +1814,11 @@ function __wbg_get_imports() {
       return addHeapObject(ret);
     },
     __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-      const ret = makeMutClosure(arg0, arg1, wasm.__wasm_bindgen_func_elem_786, __wasm_bindgen_func_elem_787);
+      const ret = makeMutClosure(arg0, arg1, wasm.__wasm_bindgen_func_elem_825, __wasm_bindgen_func_elem_826);
       return addHeapObject(ret);
     },
     __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-      const ret = makeMutClosure(arg0, arg1, wasm.__wasm_bindgen_func_elem_1114, __wasm_bindgen_func_elem_1115);
+      const ret = makeMutClosure(arg0, arg1, wasm.__wasm_bindgen_func_elem_1153, __wasm_bindgen_func_elem_1154);
       return addHeapObject(ret);
     },
     __wbindgen_cast_0000000000000003: function(arg0) {
@@ -1808,13 +1854,13 @@ function __wbg_get_imports() {
     "./idkit_wasm_bg.js": import0
   };
 }
-function __wasm_bindgen_func_elem_787(arg0, arg1) {
-  wasm.__wasm_bindgen_func_elem_787(arg0, arg1);
+function __wasm_bindgen_func_elem_826(arg0, arg1) {
+  wasm.__wasm_bindgen_func_elem_826(arg0, arg1);
 }
-function __wasm_bindgen_func_elem_1115(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_1154(arg0, arg1, arg2) {
   try {
     const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-    wasm.__wasm_bindgen_func_elem_1115(retptr, arg0, arg1, addHeapObject(arg2));
+    wasm.__wasm_bindgen_func_elem_1154(retptr, arg0, arg1, addHeapObject(arg2));
     var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
     var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
     if (r1) {
@@ -1824,8 +1870,8 @@ function __wasm_bindgen_func_elem_1115(arg0, arg1, arg2) {
     wasm.__wbindgen_add_to_stack_pointer(16);
   }
 }
-function __wasm_bindgen_func_elem_1581(arg0, arg1, arg2, arg3) {
-  wasm.__wasm_bindgen_func_elem_1581(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_1619(arg0, arg1, arg2, arg3) {
+  wasm.__wasm_bindgen_func_elem_1619(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 var __wbindgen_enum_RequestCache = ["default", "no-store", "reload", "no-cache", "force-cache", "only-if-cached"];
 var __wbindgen_enum_RequestCredentials = ["omit", "same-origin", "include"];
@@ -2157,6 +2203,10 @@ async function initIDKit() {
   return wasmInitPromise;
 }
 
+// package.json
+var package_default = {
+  version: "4.2.1"};
+
 // src/lib/debug.ts
 var _debug = false;
 function isDebug() {
@@ -2166,12 +2216,49 @@ function isDebug() {
 function setDebug(enabled) {
   _debug = enabled;
 }
+function buildDebugReport(report) {
+  return {
+    ...report,
+    version: 1,
+    package_version: package_default.version
+  };
+}
 
 // src/transports/native.ts
 var MINIAPP_VERIFY_ACTION = "miniapp-verify-action";
 function toNativeErrorCode(error) {
   const code = error instanceof Error ? error.message : String(error);
   return Object.values(IDKitErrorCodes).includes(code) ? code : "generic_error" /* GenericError */;
+}
+function asDebugObject(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value === "object" && value !== null) {
+    return value;
+  }
+  return { value };
+}
+function detectNativePlatform() {
+  const w = window;
+  const webkit = w.webkit;
+  if (webkit?.messageHandlers?.minikit) {
+    return "ios";
+  }
+  if (w.Android) {
+    return "android";
+  }
+  return "none";
+}
+function detectSendChannel() {
+  const platform = detectNativePlatform();
+  if (platform === "ios") {
+    return "webkit.minikit";
+  }
+  if (platform === "android") {
+    return "Android.postMessage";
+  }
+  return "none";
 }
 function isInWorldApp() {
   return typeof window !== "undefined" && Boolean(window.WorldApp);
@@ -2211,10 +2298,22 @@ var NativeIDKitRequest = class {
     this.messageHandler = null;
     this.miniKitHandler = null;
     this.requestId = crypto.randomUUID?.() ?? `native-${Date.now()}-${++_requestCounter}`;
+    this.requestPayload = wasmPayload;
+    this.responsePayload = void 0;
+    this.debugState = {
+      verify_version: version,
+      platform: detectNativePlatform(),
+      send_channel: detectSendChannel()
+    };
     this.resultPromise = new Promise((resolve) => {
       this.resolveFn = resolve;
-      const handleIncomingPayload = (responsePayload) => {
+      const recordResponse = (responsePayload, responseChannel) => {
+        this.debugState.response_channel = responseChannel;
+        this.responsePayload = responsePayload;
+      };
+      const handleIncomingPayload = (responsePayload, responseChannel) => {
         if (this.completionResult) return;
+        recordResponse(responsePayload, responseChannel);
         if (isDebug())
           console.debug("[IDKit] Native: received response", responsePayload);
         if (responsePayload?.status === "error") {
@@ -2263,16 +2362,18 @@ var NativeIDKitRequest = class {
       const handler = (event) => {
         const data = event.data;
         if (data?.type === MINIAPP_VERIFY_ACTION || data?.command === MINIAPP_VERIFY_ACTION) {
-          handleIncomingPayload(data.payload ?? data);
+          handleIncomingPayload(data.payload ?? data, "window.message");
         }
       };
       this.messageHandler = handler;
       window.addEventListener("message", handler);
+      let miniKitSubscribed = false;
       try {
         const miniKit = window.MiniKit;
         if (typeof miniKit?.subscribe === "function") {
+          miniKitSubscribed = true;
           const miniKitHandler = (payload) => {
-            handleIncomingPayload(payload?.payload ?? payload);
+            handleIncomingPayload(payload?.payload ?? payload, "minikit");
           };
           this.miniKitHandler = miniKitHandler;
           miniKit.subscribe(MINIAPP_VERIFY_ACTION, miniKitHandler);
@@ -2281,6 +2382,7 @@ var NativeIDKitRequest = class {
         if (isDebug())
           console.warn("[IDKit] Native: MiniKit subscribe failed", err);
       }
+      this.debugState.minikit_subscribed = miniKitSubscribed;
       const sendPayload = {
         command: "verify",
         version,
@@ -2307,6 +2409,7 @@ var NativeIDKitRequest = class {
             console.warn(
               "[IDKit] Native: no native bridge found (no webkit/Android)"
             );
+          this.responsePayload = { error: "generic_error" /* GenericError */ };
           this.complete({
             success: false,
             error: "generic_error" /* GenericError */
@@ -2314,11 +2417,22 @@ var NativeIDKitRequest = class {
         }
       } catch (err) {
         if (isDebug()) console.warn("[IDKit] Native: postMessage failed", err);
+        this.responsePayload = { error: "generic_error" /* GenericError */ };
         this.complete({
           success: false,
           error: "generic_error" /* GenericError */
         });
       }
+    });
+  }
+  getDebugReport() {
+    return buildDebugReport({
+      transport: "mini_app",
+      generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+      request_id: this.requestId,
+      request_payload: asDebugObject(this.requestPayload),
+      response_payload: asDebugObject(this.responsePayload),
+      mini_app: this.debugState
     });
   }
   // Single entry point for finishing the request. Idempotent — first caller wins.
@@ -2501,6 +2615,11 @@ async function pollUntilCompletionLoop(pollOnce, options) {
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 }
+function getBridgeDebugReport(wasmRequest) {
+  return buildDebugReport(
+    wasmRequest.getDebugReport()
+  );
+}
 var IDKitRequestImpl = class {
   constructor(wasmRequest) {
     this.wasmRequest = wasmRequest;
@@ -2518,6 +2637,9 @@ var IDKitRequestImpl = class {
   }
   pollUntilCompletion(options) {
     return pollUntilCompletionLoop(() => this.pollOnce(), options);
+  }
+  getDebugReport() {
+    return getBridgeDebugReport(this.wasmRequest);
   }
 };
 var IDKitInviteCodeRequestImpl = class {
@@ -2541,6 +2663,9 @@ var IDKitInviteCodeRequestImpl = class {
   }
   pollUntilCompletion(options) {
     return pollUntilCompletionLoop(() => this.pollOnce(), options);
+  }
+  getDebugReport() {
+    return getBridgeDebugReport(this.wasmRequest);
   }
 };
 function CredentialRequest(credential_type, options) {
@@ -2580,6 +2705,9 @@ function proofOfHuman(opts = {}) {
 }
 function passport(opts = {}) {
   return { type: "Passport", signal: opts.signal };
+}
+function mnc(opts = {}) {
+  return { type: "Mnc", signal: opts.signal };
 }
 function identityCheck(params) {
   return {
@@ -2790,7 +2918,7 @@ function createRequest(config) {
   if (!config.app_id) {
     throw new Error("app_id is required");
   }
-  if (!config.action) {
+  if (config.action === void 0 || config.action === null) {
     throw new Error("action is required");
   }
   if (!config.rp_context) {
@@ -2821,7 +2949,7 @@ function createRequestWithInviteCode(config) {
   if (!config.app_id) {
     throw new Error("app_id is required");
   }
-  if (!config.action) {
+  if (config.action === void 0 || config.action === null) {
     throw new Error("action is required");
   }
   if (!config.rp_context) {
@@ -2930,6 +3058,8 @@ var IDKit = {
   proofOfHuman,
   /** Create a Passport preset for World ID 4.0 with legacy document fallback */
   passport,
+  /** Create an Mnc preset for World ID 4.0 with legacy document fallback */
+  mnc,
   /** Create an IdentityCheck preset for World ID 4.0 identity attestation */
   identityCheck
 };
@@ -2965,4 +3095,4 @@ function isValidHex(s) {
   return /^[0-9a-fA-F]+$/.test(s);
 }
 
-export { CredentialRequest, IDKit, IDKitErrorCodes, all, any, deviceLegacy, documentLegacy, enumerate, hashSignal2 as hashSignal, identityCheck, isDebug, isInWorldApp, isNode, isReactNative, isWeb, orbLegacy, passport, proofOfHuman, secureDocumentLegacy, selfieCheckLegacy, setDebug };
+export { CredentialRequest, IDKit, IDKitErrorCodes, all, any, deviceLegacy, documentLegacy, enumerate, hashSignal2 as hashSignal, identityCheck, isDebug, isInWorldApp, isNode, isReactNative, isWeb, mnc, orbLegacy, passport, proofOfHuman, secureDocumentLegacy, selfieCheckLegacy, setDebug };

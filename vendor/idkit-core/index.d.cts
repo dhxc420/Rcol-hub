@@ -1,4 +1,4 @@
-export { RpSignature, SignRequestParams, signRequest } from '@worldcoin/idkit-server';
+export { RpSignature, SignRequestParams, getSessionCommitment, signRequest } from '@worldcoin/idkit-server';
 export { hashSignal } from './hashing.cjs';
 
 /**
@@ -332,6 +332,12 @@ interface PassportPreset {
     signal?: string;
 }
 
+interface MncPreset {
+    /** Requests a World ID 4.0 MNC credential with legacy document fallback. */
+    type: "Mnc";
+    signal?: string;
+}
+
 interface IdentityCheckPreset {
     /** This preset requires World ID 4.0-compatible clients. */
     type: "IdentityCheck";
@@ -347,6 +353,7 @@ type Preset =
 | DeviceLegacyPreset
 | ProofOfHumanPreset
 | PassportPreset
+| MncPreset
 | IdentityCheckPreset;
 
 /**
@@ -355,6 +362,29 @@ type Preset =
  * Source of truth: rust/core/src/wasm_bindings.rs (typescript_custom_section)
  */
 
+/** Mini-app (World App native transport) diagnostics. All fields optional — they are filled in as the request progresses. */
+type MiniAppDebugInfo = {
+    verify_version?: 1 | 2;
+    platform?: "ios" | "android" | "none";
+    send_channel?: "webkit.minikit" | "Android.postMessage" | "none";
+    minikit_subscribed?: boolean;
+    response_channel?: "window.message" | "minikit";
+};
+type IDKitDebugReport = {
+    /** Schema version of this debug report (distinct from the SDK `package_version`). Currently always 1. */
+    version: 1;
+    package_version: string;
+    transport: "bridge" | "mini_app";
+    generated_at: string;
+    request_id?: string;
+    request_payload?: object;
+    /**
+     * Bridge transport: decrypted plaintext response payload (string), present
+     * only once the request completes. Native transport: structured debug object.
+     */
+    response_payload?: object | string;
+    mini_app?: MiniAppDebugInfo;
+};
 /**
  * IDKit error codes enum — runtime values for matching against errors.
  * Values mirror Rust's AppError enum (snake_case via serde rename_all).
@@ -454,6 +484,8 @@ interface IDKitRequest {
     pollOnce(): Promise<Status>;
     /** Poll continuously until completion or timeout */
     pollUntilCompletion(options?: WaitOptions): Promise<IDKitCompletionResult>;
+    /** Debug report for the latest request state. Always available, independent of debug mode. */
+    getDebugReport(): IDKitDebugReport;
 }
 /**
  * An invite-code mode World ID verification request (WDP-73).
@@ -475,6 +507,8 @@ interface IDKitInviteCodeRequest {
     pollOnce(): Promise<Status>;
     /** Poll continuously until completion or timeout */
     pollUntilCompletion(options?: WaitOptions): Promise<IDKitCompletionResult>;
+    /** Debug report for the latest request state. Always available, independent of debug mode. */
+    getDebugReport(): IDKitDebugReport;
 }
 /**
  * Creates a CredentialRequest for a credential type
@@ -662,6 +696,21 @@ declare function proofOfHuman(opts?: {
 declare function passport(opts?: {
     signal?: string;
 }): PassportPreset;
+/**
+ * Creates an Mnc preset for World ID 4.0 with legacy document fallback
+ *
+ * @param opts - Optional configuration with signal
+ * @returns An Mnc preset
+ *
+ * @example
+ * ```typescript
+ * const request = await IDKit.request({ app_id, action, rp_context, allow_legacy_proofs: false })
+ *   .preset(mnc({ signal: 'user-123' }))
+ * ```
+ */
+declare function mnc(opts?: {
+    signal?: string;
+}): MncPreset;
 /**
  * Creates an IdentityCheck preset for document-based identity attestation.
  *
@@ -913,6 +962,8 @@ declare const IDKit: {
     proofOfHuman: typeof proofOfHuman;
     /** Create a Passport preset for World ID 4.0 with legacy document fallback */
     passport: typeof passport;
+    /** Create an Mnc preset for World ID 4.0 with legacy document fallback */
+    mnc: typeof mnc;
     /** Create an IdentityCheck preset for World ID 4.0 identity attestation */
     identityCheck: typeof identityCheck;
 };
@@ -942,4 +993,4 @@ declare const isNode: () => boolean;
 declare function isDebug(): boolean;
 declare function setDebug(enabled: boolean): void;
 
-export { type AbiEncodedValue, type ConstraintNode, CredentialRequest, type CredentialRequestType, type CredentialType, type DeviceLegacyPreset, type DocumentLegacyPreset, type DocumentType, IDKit, type IDKitCompletionResult, type IDKitErrorCode, IDKitErrorCodes, type IDKitInviteCodeRequest, type IDKitRequest, type IDKitRequestConfig, type IDKitResult, type IDKitResultSession, type IDKitSessionConfig, type IdentityAttribute, type IdentityCheckPreset, type IntegrityBundle, type IntegritySignatureFormat, type OrbLegacyPreset, type PassportPreset, type Preset, type ProofOfHumanPreset, type ResponseItemSession, type ResponseItemV3, type ResponseItemV4, type RpContext, type SecureDocumentLegacyPreset, type SelfieCheckLegacyPreset, type Status$1 as Status, type WaitOptions, all, any, deviceLegacy, documentLegacy, enumerate, identityCheck, isDebug, isInWorldApp, isNode, isReactNative, isWeb, orbLegacy, passport, proofOfHuman, secureDocumentLegacy, selfieCheckLegacy, setDebug };
+export { type AbiEncodedValue, type ConstraintNode, CredentialRequest, type CredentialRequestType, type CredentialType, type DeviceLegacyPreset, type DocumentLegacyPreset, type DocumentType, IDKit, type IDKitCompletionResult, type IDKitDebugReport, type IDKitErrorCode, IDKitErrorCodes, type IDKitInviteCodeRequest, type IDKitRequest, type IDKitRequestConfig, type IDKitResult, type IDKitResultSession, type IDKitSessionConfig, type IdentityAttribute, type IdentityCheckPreset, type IntegrityBundle, type IntegritySignatureFormat, type MiniAppDebugInfo, type MncPreset, type OrbLegacyPreset, type PassportPreset, type Preset, type ProofOfHumanPreset, type ResponseItemSession, type ResponseItemV3, type ResponseItemV4, type RpContext, type SecureDocumentLegacyPreset, type SelfieCheckLegacyPreset, type Status$1 as Status, type WaitOptions, all, any, deviceLegacy, documentLegacy, enumerate, identityCheck, isDebug, isInWorldApp, isNode, isReactNative, isWeb, mnc, orbLegacy, passport, proofOfHuman, secureDocumentLegacy, selfieCheckLegacy, setDebug };

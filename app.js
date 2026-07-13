@@ -9,7 +9,8 @@ const RCOL_DECIMALS = 18;
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
 const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2/tokens/";
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
-const PUF_APP_ID = "app_e5ba7c3061400e361f98ce44d8b1b9c4";
+const STAKING_APP_URL =
+  "https://world.org/mini-app?app_id=app_71ab236862b2a6b92bb663a6ceeda3f2&path=&draft_id=meta_8e90416ea4ab360f84c860bb90fac074";
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -98,10 +99,10 @@ const fallbackConfig = {
     },
     {
       id: "puf",
-      title: "Token RCOL en PUF",
-      description: "Ver token y mercado",
-      url: "https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4&path=/token/0x82bf7aa0680d9c2d6ffa77b995e2092fe68d308a",
-      icon: "link",
+      title: "Staking RCOL",
+      description: "Haz staking de RCOL",
+      url: STAKING_APP_URL,
+      icon: "landmark",
       accent: "#facc15"
     },
     {
@@ -678,7 +679,12 @@ function applyConfig(config) {
   document.querySelector("#tokenAddress").textContent = config.tokenAddress;
 
   const puf = config.links.find((link) => link.id === "puf");
-  if (puf && !isPlaceholder(puf.url)) document.querySelector("#pufCta").href = puf.url;
+  const pufCta = document.querySelector("#pufCta");
+  if (puf && pufCta && !isPlaceholder(puf.url)) {
+    pufCta.href = puf.url;
+    const label = pufCta.querySelector("span");
+    if (label) label.textContent = puf.title || "Staking RCOL";
+  }
 
   renderAnnouncements(config.announcements || []);
   renderLinks(config.links);
@@ -907,11 +913,13 @@ async function resolveMiniKitIdentity() {
 
   let address = MiniKitApi.user?.walletAddress;
   let username = MiniKitApi.user?.username;
+  let profilePictureUrl = MiniKitApi.user?.profilePictureUrl || null;
 
   for (let attempt = 0; attempt < 4 && !address; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 280));
     address = MiniKitApi.user?.walletAddress;
     username = MiniKitApi.user?.username;
+    profilePictureUrl = MiniKitApi.user?.profilePictureUrl || profilePictureUrl;
   }
 
   if (!address && typeof MiniKitApi.getUserInfo === "function") {
@@ -919,18 +927,20 @@ async function resolveMiniKitIdentity() {
       const info = await MiniKitApi.getUserInfo();
       address = info?.walletAddress ?? info?.address;
       username = username ?? info?.username;
+      profilePictureUrl = profilePictureUrl || info?.profilePictureUrl || null;
     } catch {}
   }
 
-  if (address && !username && typeof MiniKitApi.getUserByAddress === "function") {
+  if (address && typeof MiniKitApi.getUserByAddress === "function") {
     try {
       const user = await MiniKitApi.getUserByAddress(address);
-      username = user?.username;
+      username = username || user?.username;
+      profilePictureUrl = profilePictureUrl || user?.profilePictureUrl || null;
     } catch {}
   }
 
   if (!address) return null;
-  return { address, username: username || null };
+  return { address, username: username || null, profilePictureUrl };
 }
 
 async function syncOrbVerification() {
@@ -1205,19 +1215,22 @@ async function connectWallet() {
     if (!address) throw new Error(JSON.stringify(data) || "sin direccion");
 
     let username = MiniKitApi.user?.username;
-    if (!username) {
-      try {
-        const user = await MiniKitApi.getUserByAddress?.(address);
-        username = user?.username;
-      } catch {}
-    }
-    walletState = { address, username };
+    let profilePictureUrl = MiniKitApi.user?.profilePictureUrl || null;
+    try {
+      const user = await MiniKitApi.getUserByAddress?.(address);
+      username = username || user?.username;
+      profilePictureUrl = profilePictureUrl || user?.profilePictureUrl || null;
+    } catch {}
+    walletState = { address, username, profilePictureUrl };
     renderWallet();
     updateSwapBalance();
     if (!document.querySelector("#swapView")?.hidden) renderSwapView();
     await syncOrbVerification();
     if (!worldIdVerified) showWorldIdModal();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
+    updateSendBalance();
+    const sendCta = document.querySelector("#sendCta span");
+    if (sendCta) sendCta.textContent = "Enviar RCOL";
     return true;
   } catch (error) {
     console.error("walletAuth error:", error);
@@ -1488,11 +1501,16 @@ let lastQuote = null;
 let quoteTimer = null;
 let quoteSeq = 0;
 
-function openPufSwap() {
-  // Abre la pagina del token RCOL en PUF para completar la compra/venta.
-  // Ruta autorizada: el usuario paga 1% (no 2%) y el proyecto cobra su creator fee.
-  const path = `/token/${RCOL_ADDRESS.toLowerCase()}`;
-  window.open(`https://world.org/mini-app?app_id=${PUF_APP_ID}&path=${encodeURIComponent(path)}`, "_blank", "noreferrer");
+function openStakingApp() {
+  window.open(STAKING_APP_URL, "_blank", "noreferrer");
+}
+
+function isValidAddress(value) {
+  return /^0x[0-9a-fA-F]{40}$/.test(String(value || "").trim());
+}
+
+function encodeErc20Transfer(to, amount) {
+  return `0xa9059cbb${pad32(to.slice(2))}${pad32(amount.toString(16))}`;
 }
 
 // Convierte un monto decimal en unidades enteras (wei) segun los decimales del token.
@@ -1641,7 +1659,7 @@ function setupSwap() {
   };
 
   // El swap se firma y ejecuta DENTRO de RCOL Hub via Uniswap v2 (Universal
-  // Router + Permit2) con la wallet de World App. Si no es World App, abre PUF.
+  // Router + Permit2) con la wallet de World App.
   ctaButton.addEventListener("click", async () => {
     const fromSym = fromSelect.value;
     const toSym = toSelect.value;
@@ -1649,7 +1667,6 @@ function setupSwap() {
 
     if (!worldAppReady || !MiniKitApi) {
       showToast("Abre el hub en World App para firmar el swap");
-      openPufSwap();
       return;
     }
 
@@ -1717,15 +1734,120 @@ function setupSwap() {
     }
   });
 
-  // Transparencia: ofrecer PUF como alternativa mas barata (1% en vez de ~2%).
-  document.querySelector("#swapPufHint")?.addEventListener("click", () => {
-    showToast("Abriendo PUF (comision 1%)");
-    openPufSwap();
-  });
-
+  setupSendRcol();
   updateSwapTeaser();
   refreshSwapRate();
   scheduleQuote();
+}
+
+let sendBalanceStr = "0";
+
+async function updateSendBalance() {
+  const maxButton = document.querySelector("#sendMax");
+  const valEl = document.querySelector("#sendBalanceVal");
+  if (!maxButton || !valEl) return;
+  if (!walletState) {
+    maxButton.hidden = true;
+    return;
+  }
+  maxButton.hidden = false;
+  try {
+    const raw = await getTokenBalanceRaw(RCOL_ADDRESS, walletState.address);
+    sendBalanceStr = fromBaseUnits(raw, RCOL_DECIMALS);
+    valEl.textContent = formatTokenAmount(Number(sendBalanceStr));
+  } catch {
+    valEl.textContent = "—";
+  }
+}
+
+function setupSendRcol() {
+  const toInput = document.querySelector("#sendTo");
+  const amountInput = document.querySelector("#sendAmount");
+  const ctaButton = document.querySelector("#sendCta");
+  const maxButton = document.querySelector("#sendMax");
+  if (!toInput || !amountInput || !ctaButton) return;
+
+  const ctaLabel = ctaButton.querySelector("span");
+  const setCta = (text, disabled) => {
+    if (ctaLabel) ctaLabel.textContent = text;
+    ctaButton.disabled = disabled;
+    ctaButton.classList.toggle("is-busy", disabled);
+  };
+
+  const syncCtaLabel = () => {
+    if (ctaButton.classList.contains("is-busy")) return;
+    setCta(walletState ? "Enviar RCOL" : "Conecta tu wallet", false);
+  };
+
+  maxButton?.addEventListener("click", () => {
+    if (!walletState || !(Number(sendBalanceStr) > 0)) return;
+    amountInput.value = sendBalanceStr;
+  });
+
+  ctaButton.addEventListener("click", async () => {
+    if (!worldAppReady || !MiniKitApi) {
+      showToast("Abre el hub en World App para enviar RCOL");
+      return;
+    }
+
+    if (!walletState) {
+      const connected = await connectWallet();
+      if (!connected) return;
+      syncCtaLabel();
+      await updateSendBalance();
+    }
+
+    const to = String(toInput.value || "").trim();
+    if (!isValidAddress(to)) {
+      showToast("Ingresa una direccion valida (0x...)");
+      toInput.focus();
+      return;
+    }
+    if (to.toLowerCase() === walletState.address.toLowerCase()) {
+      showToast("No puedes enviarte a ti mismo");
+      return;
+    }
+
+    const amount = parseFloat(amountInput.value);
+    if (!(amount > 0)) {
+      showToast("Ingresa una cantidad para enviar");
+      amountInput.focus();
+      return;
+    }
+
+    const amountWei = toBaseUnits(amountInput.value, RCOL_DECIMALS);
+    if (amountWei <= 0n) {
+      showToast("Cantidad invalida");
+      return;
+    }
+
+    try {
+      setCta("Confirma en tu wallet...", true);
+      const transferData = encodeErc20Transfer(to, amountWei);
+      const result = await MiniKitApi.sendTransaction({
+        chainId: 480,
+        transactions: [{ to: RCOL_ADDRESS, data: transferData }]
+      });
+      console.log("RCOL send result:", result);
+      showToast(`Envio enviado: ${amountInput.value} RCOL`);
+      amountInput.value = "";
+      setTimeout(() => {
+        updateSendBalance();
+        updateSwapBalance();
+        if (typeof fetchAllBalances === "function") fetchAllBalances();
+      }, 12000);
+    } catch (error) {
+      console.error("Send RCOL error:", error);
+      const message = error?.message || error?.error_code || String(error);
+      if (/reject|cancel|denied/i.test(message)) showToast("Envio cancelado");
+      else showToast(`Envio fallo: ${message}`);
+    } finally {
+      syncCtaLabel();
+    }
+  });
+
+  syncCtaLabel();
+  updateSendBalance();
 }
 
 function scheduleQuote() {
@@ -2133,14 +2255,41 @@ function renderSwapView() {
   renderTxHistory();
   refreshSwapRate();
   scheduleQuote();
+  updateSendBalance();
+  const sendCta = document.querySelector("#sendCta span");
+  if (sendCta) sendCta.textContent = walletState ? "Enviar RCOL" : "Conecta tu wallet";
 }
 
-// Avatar tipo "blockie": gradiente único derivado de la dirección.
+// Fallback visual si World no entrega foto de perfil.
 function avatarGradient(address) {
-  const hex = address.slice(2);
-  const h1 = parseInt(hex.slice(0, 6), 16) % 360;
-  const h2 = (h1 + 60 + (parseInt(hex.slice(6, 10), 16) % 120)) % 360;
+  const hex = (address || "0x00").slice(2);
+  const h1 = parseInt(hex.slice(0, 6) || "0", 16) % 360;
+  const h2 = (h1 + 60 + (parseInt(hex.slice(6, 10) || "0", 16) % 120)) % 360;
   return `linear-gradient(135deg, hsl(${h1} 70% 55%), hsl(${h2} 80% 45%))`;
+}
+
+function setWalletAvatar(address, profilePictureUrl) {
+  const avatarEl = document.querySelector("#walletAvatar");
+  const imgEl = document.querySelector("#walletAvatarImg");
+  if (!avatarEl) return;
+
+  if (profilePictureUrl && imgEl) {
+    imgEl.hidden = false;
+    imgEl.src = profilePictureUrl;
+    imgEl.onerror = () => {
+      imgEl.hidden = true;
+      imgEl.removeAttribute("src");
+      avatarEl.style.background = avatarGradient(address);
+    };
+    avatarEl.style.background = "transparent";
+    return;
+  }
+
+  if (imgEl) {
+    imgEl.hidden = true;
+    imgEl.removeAttribute("src");
+  }
+  avatarEl.style.background = address ? avatarGradient(address) : "";
 }
 
 function renderWalletCard() {
@@ -2159,7 +2308,16 @@ function renderWalletCard() {
     if (connectBtn) connectBtn.hidden = true;
     if (refreshBtn) refreshBtn.hidden = false;
     if (emptyEl) emptyEl.hidden = true;
-    if (avatarEl) avatarEl.style.background = avatarGradient(walletState.address);
+    setWalletAvatar(walletState.address, walletState.profilePictureUrl);
+    if (avatarEl && (walletState.username || walletState.address)) {
+      avatarEl.style.cursor = "pointer";
+      avatarEl.title = "Ver perfil World";
+      avatarEl.onclick = () => {
+        try {
+          MiniKitApi?.showProfileCard?.(walletState.username || undefined, walletState.address);
+        } catch {}
+      };
+    }
     if (addrBtn && addrText) {
       addrBtn.hidden = false;
       addrText.textContent = shortAddress(walletState.address);
@@ -2171,7 +2329,12 @@ function renderWalletCard() {
     if (refreshBtn) refreshBtn.hidden = true;
     if (emptyEl) emptyEl.hidden = false;
     if (totalEl) totalEl.hidden = true;
-    if (avatarEl) avatarEl.style.background = "";
+    setWalletAvatar(null, null);
+    if (avatarEl) {
+      avatarEl.style.cursor = "";
+      avatarEl.title = "";
+      avatarEl.onclick = null;
+    }
     if (addrBtn) addrBtn.hidden = true;
     if (balancesEl) { balancesEl.innerHTML = ""; balancesEl.hidden = true; }
   }

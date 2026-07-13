@@ -165,7 +165,7 @@ const fallbackConfig = {
     {
       title: "Siguenos en X",
       subtitle: "@Rcol_Oficial",
-      icon: "x",
+      icon: "./assets/x-icon.svg",
       accent: "#ffffff",
       image: "",
       url: "https://x.com/Rcol_Oficial"

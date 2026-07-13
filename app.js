@@ -1492,7 +1492,7 @@ async function fetchBurned() {
 
   setStat("statBurn", `${abbreviate(burned)} RCOL`);
   if (supply > 0 && burned > 0) {
-    setStat("statBurnPct", `${((burned / supply) * 100).toFixed(2)}% del supply`);
+    setStat("statBurnPct", `${((burned / supply) * 100).toFixed(2)}% del suministro`);
   }
 }
 

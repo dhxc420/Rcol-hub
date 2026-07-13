@@ -938,15 +938,15 @@ html[data-theme="light"] .swap-fee {
 .market-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stat-card {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   align-content: start;
   min-width: 0;
-  padding: 12px;
+  padding: 12px 12px 11px;
   border: 1px solid var(--line-soft);
   border-radius: 16px;
   background: var(--chip);
@@ -962,21 +962,23 @@ html[data-theme="light"] .swap-fee {
 
 .stat-card strong {
   color: var(--ink);
-  font-size: 1.18rem;
+  font-size: clamp(0.95rem, 3.8vw, 1.15rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .stat-card small {
   color: var(--muted);
-  font-size: 0.7rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 /* ---------- Swap ---------- */
@@ -2888,7 +2890,7 @@ svg.link-card__chevron {
   }
 
   .stat-card strong {
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
 
   .swap-row input,
@@ -2945,10 +2947,6 @@ svg.link-card__chevron {
 @media (min-width: 560px) {
   .link-grid {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .market-grid {
-    grid-template-columns: repeat(4, 1fr);
   }
 }
 

@@ -132,8 +132,8 @@ const fallbackConfig = {
     },
     {
       title: "Telegram",
-      handle: "t.me/updatesDzc",
-      url: "https://t.me/updatesDzc",
+      handle: "t.me/oficialRcol",
+      url: "https://t.me/oficialRcol",
       icon: "send"
     }
   ],

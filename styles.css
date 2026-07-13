@@ -663,8 +663,7 @@ main > section,
 .panel,
 .banner-card,
 .rcolito-card,
-.token-panel,
-.community-panel {
+.token-panel {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--panel);
@@ -2003,9 +2002,67 @@ html[data-theme="light"] .link-card__icon {
 }
 
 .community-panel {
+  position: relative;
   display: grid;
   gap: 12px;
-  padding: 14px;
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, #7c5cff 28%, var(--line));
+  border-radius: 22px;
+  box-shadow: var(--shadow-soft);
+  background:
+    linear-gradient(180deg, rgba(8, 6, 20, 0.25) 0%, rgba(8, 6, 20, 0.72) 42%, rgba(8, 6, 20, 0.92) 100%),
+    #0a0718;
+}
+
+.community-panel__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    url("./assets/community-bg.png") center top / cover no-repeat;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.community-panel__heading {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 18px 16px 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 4, 18, 0.82) 0%,
+    rgba(6, 4, 18, 0.55) 55%,
+    rgba(6, 4, 18, 0) 100%
+  );
+}
+
+.community-panel__heading .section-label {
+  color: #f0c45a;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+.community-panel__heading h2 {
+  color: #fff8e8;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
+}
+
+.community-panel .community-links,
+.community-panel .legal-links {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0 14px;
+}
+
+.community-panel .legal-links {
+  padding-bottom: 14px;
+}
+
+.community-panel .legal-links a {
+  color: rgba(255, 245, 220, 0.78);
 }
 
 .community-links {
@@ -2019,13 +2076,14 @@ html[data-theme="light"] .link-card__icon {
   justify-content: center;
   gap: 9px;
   padding: 10px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
-  background: var(--chip);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #fff8e8;
   font-size: 0.92rem;
   font-weight: 700;
-  transition: transform 120ms ease;
+  transition: transform 120ms ease, background 140ms ease;
 }
 
 .community-link:active {
@@ -2034,7 +2092,7 @@ html[data-theme="light"] .link-card__icon {
 
 .community-link small {
   display: block;
-  color: var(--muted);
+  color: rgba(255, 245, 220, 0.72);
   font-size: 0.74rem;
   font-weight: 500;
 }
@@ -2051,6 +2109,7 @@ html[data-theme="light"] .link-card__icon {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
+  color: #f8d66d;
 }
 
 /* ---------- Bottom nav & toast ---------- */

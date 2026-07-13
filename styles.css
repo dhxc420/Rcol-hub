@@ -2019,11 +2019,11 @@ html[data-theme="light"] .link-card__icon {
 .community-panel__bg {
   position: absolute;
   inset: 0;
-  top: -22%;
-  bottom: -8%;
+  top: -10%;
+  bottom: -6%;
   z-index: 0;
   background:
-    url("./assets/community-bg.png") center 18% / cover no-repeat;
+    url("./assets/community-bg.png") center 28% / cover no-repeat;
   opacity: 0.95;
   pointer-events: none;
 }
@@ -2070,20 +2070,20 @@ html[data-theme="light"] .link-card__icon {
 .community-links {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .community-link {
-  min-height: 60px;
+  min-height: 48px;
   justify-content: center;
-  gap: 9px;
-  padding: 10px;
+  gap: 7px;
+  padding: 8px 9px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   color: #fff8e8;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 700;
   transition: transform 120ms ease, background 140ms ease;
 }
@@ -2095,21 +2095,21 @@ html[data-theme="light"] .link-card__icon {
 .community-link small {
   display: block;
   color: rgba(255, 245, 220, 0.72);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 500;
 }
 
 .community-link__icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
   object-fit: cover;
   flex-shrink: 0;
 }
 
 .community-link i {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   color: #f8d66d;
 }

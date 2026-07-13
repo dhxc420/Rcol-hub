@@ -1174,7 +1174,53 @@ html[data-theme="light"] .swap-fee {
 }
 
 .send-panel {
-  margin-top: 14px;
+  margin-top: 0;
+}
+
+.send-panel[hidden],
+.swap-panel[hidden] {
+  display: none;
+}
+
+.wallet-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip);
+}
+
+.wallet-mode__btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
+}
+
+.wallet-mode__btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wallet-mode__btn.is-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gold-bright) 88%, #fff), var(--gold));
+  color: #171005;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--gold) 28%, transparent);
+}
+
+.wallet-mode__btn:active {
+  transform: scale(0.98);
 }
 
 .send-box {

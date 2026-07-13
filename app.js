@@ -1748,9 +1748,47 @@ function setupSwap() {
   });
 
   setupSendRcol();
+  setupWalletMode();
   updateSwapTeaser();
   refreshSwapRate();
   scheduleQuote();
+}
+
+function setWalletMode(mode) {
+  const isSend = mode === "send";
+  const swapPanel = document.querySelector("#section-swap");
+  const sendPanel = document.querySelector("#section-send");
+  const rateRow = document.querySelector("#swapRate");
+  const history = document.querySelector("#txHistory");
+  const title = document.querySelector(".swap-view .view-topbar strong");
+  const swapBtn = document.querySelector("#modeSwapBtn");
+  const sendBtn = document.querySelector("#modeSendBtn");
+
+  if (swapPanel) swapPanel.hidden = isSend;
+  if (sendPanel) sendPanel.hidden = !isSend;
+  if (rateRow) rateRow.hidden = isSend || !rateRow.dataset.hasRate;
+  if (history && isSend) history.hidden = true;
+  if (!isSend) renderTxHistory();
+
+  if (title) title.textContent = isSend ? "Enviar RCOL" : "Swap RCOL";
+  if (swapBtn) {
+    swapBtn.classList.toggle("is-active", !isSend);
+    swapBtn.setAttribute("aria-selected", String(!isSend));
+  }
+  if (sendBtn) {
+    sendBtn.classList.toggle("is-active", isSend);
+    sendBtn.setAttribute("aria-selected", String(isSend));
+  }
+
+  if (isSend) updateSendBalance();
+  else scheduleQuote();
+  window.lucide?.createIcons?.();
+}
+
+function setupWalletMode() {
+  document.querySelector("#modeSwapBtn")?.addEventListener("click", () => setWalletMode("swap"));
+  document.querySelector("#modeSendBtn")?.addEventListener("click", () => setWalletMode("send"));
+  setWalletMode("swap");
 }
 
 let sendBalanceStr = "0";
@@ -2088,7 +2126,8 @@ function paintTxList(items) {
   const section = document.querySelector("#txHistory");
   const list = document.querySelector("#txHistoryList");
   if (!section || !list) return;
-  if (!items.length) { section.hidden = true; return; }
+  const sendMode = !document.querySelector("#section-send")?.hidden;
+  if (!items.length || sendMode) { section.hidden = true; return; }
   section.hidden = false;
   list.innerHTML = items.slice(0, TX_HISTORY_MAX).map(txItemHtml).join("");
   window.lucide?.createIcons?.();
@@ -2252,7 +2291,12 @@ function setSwapRate(rateText, shortText) {
   const row = document.querySelector("#swapRate");
   const rowText = document.querySelector("#swapRateText");
   if (pill && rateText) pill.textContent = shortText || rateText;
-  if (row && rowText && rateText) { rowText.textContent = `${rateText} · Uniswap v2`; row.hidden = false; }
+  if (row && rowText && rateText) {
+    rowText.textContent = `${rateText} · Uniswap v2`;
+    row.dataset.hasRate = "1";
+    const sendMode = !document.querySelector("#section-send")?.hidden;
+    row.hidden = Boolean(sendMode);
+  }
 }
 
 function renderSwapView() {

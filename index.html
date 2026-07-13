@@ -276,6 +276,17 @@
           <div class="wallet-tokens" id="swapBalances" hidden></div>
         </div>
 
+        <div class="wallet-mode" role="tablist" aria-label="Acciones de wallet">
+          <button class="wallet-mode__btn is-active" id="modeSwapBtn" type="button" role="tab" aria-selected="true" data-mode="swap">
+            <i data-lucide="arrow-left-right" aria-hidden="true"></i>
+            <span>Swap</span>
+          </button>
+          <button class="wallet-mode__btn" id="modeSendBtn" type="button" role="tab" aria-selected="false" data-mode="send">
+            <i data-lucide="send" aria-hidden="true"></i>
+            <span>Enviar RCOL</span>
+          </button>
+        </div>
+
         <div class="panel swap-panel" id="section-swap">
           <div class="swap-box">
             <div class="swap-field">
@@ -314,11 +325,7 @@
           </div>
         </div>
 
-        <div class="panel send-panel" id="section-send">
-          <div class="section-heading">
-            <span class="section-label">Wallet</span>
-            <h2>Enviar RCOL</h2>
-          </div>
+        <div class="panel send-panel" id="section-send" hidden>
           <div class="send-box">
             <div class="swap-field">
               <label for="sendTo">Direccion destino</label>

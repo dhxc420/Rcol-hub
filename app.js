@@ -128,7 +128,7 @@ const fallbackConfig = {
       title: "X",
       handle: "@Rcol_Oficial",
       url: "https://x.com/Rcol_Oficial",
-      icon: "x"
+      icon: "./assets/x-icon.svg"
     },
     {
       title: "Telegram",
@@ -662,8 +662,11 @@ function renderCommunity(community) {
     element.href = item.url;
     element.target = "_blank";
     element.rel = "noreferrer";
+    const icon = isImageAsset(item.icon)
+      ? `<img class="community-link__icon" src="${escapeHtml(item.icon)}" alt="" />`
+      : `<i data-lucide="${escapeHtml(item.icon || "link")}" aria-hidden="true"></i>`;
     element.innerHTML = `
-      <i data-lucide="${escapeHtml(item.icon || "link")}" aria-hidden="true"></i>
+      ${icon}
       <span>${escapeHtml(item.title)}<small>${escapeHtml(item.handle)}</small></span>
     `;
     wrapper.appendChild(element);

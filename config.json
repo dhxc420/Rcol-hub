@@ -85,7 +85,7 @@
       "title": "X",
       "handle": "@Rcol_Oficial",
       "url": "https://x.com/Rcol_Oficial",
-      "icon": "x"
+      "icon": "./assets/x-icon.svg"
     },
     {
       "title": "Telegram",

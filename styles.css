@@ -1993,6 +1993,20 @@ html[data-theme="light"] .link-card__icon {
   font-weight: 500;
 }
 
+.community-link__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.community-link i {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
 /* ---------- Bottom nav & toast ---------- */
 
 .bottom-nav {

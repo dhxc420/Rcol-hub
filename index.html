@@ -19,11 +19,46 @@
       })();
     </script>
     <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        display: grid;
+        place-items: center;
+        background: #050403;
+        opacity: 1;
+        transition: opacity 0.7s ease;
+      }
+      .app-splash.is-leaving {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .app-splash[hidden] {
+        display: none;
+      }
+      .app-splash__img {
+        width: min(78vw, 340px);
+        height: auto;
+        animation: splash-float 2.4s ease-in-out infinite;
+      }
+      @keyframes splash-float {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-10px) scale(1.02); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-splash__img { animation: none; }
+        .app-splash { transition: opacity 0.25s ease; }
+      }
+    </style>
     <script src="https://unpkg.com/lucide@1.18.0" defer></script>
     <script type="module" src="./app.js"></script>
   </head>
   <body>
     <!-- Last deploy: 2026-06-08 14:40:35 -->
+    <div class="app-splash" id="appSplash" role="status" aria-live="polite" aria-label="Cargando RCOL Hub">
+      <img class="app-splash__img" src="./assets/splash-preloader.png" alt="RCOL Hub" />
+    </div>
     <div class="app-shell">
       <header class="hero">
         <nav class="topbar" aria-label="RCOL Hub">

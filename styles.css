@@ -2019,9 +2019,11 @@ html[data-theme="light"] .link-card__icon {
 .community-panel__bg {
   position: absolute;
   inset: 0;
+  top: -22%;
+  bottom: -8%;
   z-index: 0;
   background:
-    url("./assets/community-bg.png") center top / cover no-repeat;
+    url("./assets/community-bg.png") center 18% / cover no-repeat;
   opacity: 0.95;
   pointer-events: none;
 }

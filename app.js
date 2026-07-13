@@ -2524,29 +2524,7 @@ function setupScrollSpy(navLinks, nftView, swapView) {
 
 /* ---------- Boot ---------- */
 
-const SPLASH_MIN_MS = 1800;
-const SPLASH_FADE_MS = 700;
-
-function dismissSplash() {
-  return new Promise((resolve) => {
-    const splash = document.querySelector("#appSplash");
-    if (!splash || splash.hidden) {
-      resolve();
-      return;
-    }
-    splash.classList.add("is-leaving");
-    const done = () => {
-      splash.hidden = true;
-      splash.setAttribute("aria-hidden", "true");
-      resolve();
-    };
-    splash.addEventListener("transitionend", done, { once: true });
-    setTimeout(done, SPLASH_FADE_MS + 80);
-  });
-}
-
 async function boot() {
-  const splashStarted = Date.now();
   setupTheme();
   setupSwap();
   setupWallet();
@@ -2561,12 +2539,6 @@ async function boot() {
   const appId = config.worldIdAppId || fallbackConfig.worldIdAppId;
   const installResult = await loadMiniKit(appId);
   updateWorldStatus(installResult);
-
-  const elapsed = Date.now() - splashStarted;
-  const waitMore = Math.max(0, SPLASH_MIN_MS - elapsed);
-  if (waitMore) await new Promise((r) => setTimeout(r, waitMore));
-  await dismissSplash();
-
   await maybeShowWorldIdModal();
 
   document.querySelector("#copyToken").addEventListener("click", () => copyToken(config));

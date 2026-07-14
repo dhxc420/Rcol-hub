@@ -1538,8 +1538,10 @@ function encodeErc20Transfer(to, amount) {
 }
 
 function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
+  const rawMessage = String(error?.message || error || "").trim();
+  const fromMessage = rawMessage.match(/Transaction failed:\s*([a-z0-9_]+)/i)?.[1];
   const code = String(
-    error?.code || error?.error_code || error?.details?.error_code || ""
+    error?.code || error?.error_code || error?.details?.error_code || fromMessage || ""
   ).trim();
   const map = {
     user_rejected: "Cancelado",
@@ -1555,32 +1557,41 @@ function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
     invalid_operation: "Operacion invalida"
   };
   if (code && map[code]) return `${map[code]} (${code})`;
-  const message = String(error?.message || error || "").trim();
-  if (/reject|cancel|denied/i.test(message)) return "Cancelado";
-  if (message) return message;
+  if (/reject|cancel|denied/i.test(rawMessage)) return "Cancelado";
+  if (rawMessage) return rawMessage;
   return fallback;
 }
 
 async function sendRcolTransfer(to, amountWei) {
-  const transferData = encodeErc20Transfer(to, amountWei);
-  // Preflight: si revierte on-chain, no abrimos MiniKit con un fallo opaco.
+  // World App falla con generic_error en transfer ERC20 directo.
+  // Mismo patron que Swap/Quema (y PUF): Permit2.approve + Universal Router.
+  if (!isValidAddress(to)) throw new Error("Direccion invalida");
+  const maxUint160 = (1n << 160n) - 1n;
+  if (amountWei <= 0n) throw new Error("Cantidad invalida");
+  if (amountWei > maxUint160) throw new Error("Cantidad demasiado grande para Permit2");
+
+  // Chequeo rapido de saldo antes de abrir MiniKit.
   if (walletState?.address) {
     try {
-      await ethCall(RCOL_ADDRESS, transferData, walletState.address);
+      const bal = await getTokenBalanceRaw(RCOL_ADDRESS, walletState.address);
+      if (bal < amountWei) throw new Error("Saldo insuficiente de RCOL");
     } catch (error) {
-      const detail = String(error?.message || error || "");
-      throw new Error(
-        /insufficient|transfer amount|exceeds balance|ERC20/i.test(detail)
-          ? "Saldo insuficiente o el token rechazo la transferencia"
-          : `Simulacion fallo: ${detail || "revert"}`
-      );
+      if (/Saldo insuficiente/i.test(String(error?.message || ""))) throw error;
     }
   }
-  const result = await MiniKitApi.sendTransaction({
+
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
+  const approveData = encodePermit2Approve(RCOL_ADDRESS, UNIVERSAL_ROUTER, amountWei, 0n);
+  const transferInput = encodePermit2TransferFromInput(RCOL_ADDRESS, to, amountWei);
+  const executeData = encodeUniversalRouterExecute(PERMIT2_TRANSFER_FROM, transferInput, deadline);
+
+  return MiniKitApi.sendTransaction({
     chainId: 480,
-    transactions: [{ to: RCOL_ADDRESS, value: "0x0", data: transferData }]
+    transactions: [
+      { to: PERMIT2, value: "0x0", data: approveData },
+      { to: UNIVERSAL_ROUTER, value: "0x0", data: executeData }
+    ]
   });
-  return result;
 }
 
 // PUF quema con helper+Permit2 (no transfer ERC20 directo a dead — World lo bloquea).
@@ -1591,22 +1602,7 @@ function encodePermit2TransferFromInput(token, recipient, amount) {
 }
 
 async function burnRcolViaPermit2(amountWei) {
-  const maxUint160 = (1n << 160n) - 1n;
-  if (amountWei <= 0n) throw new Error("Cantidad invalida");
-  if (amountWei > maxUint160) throw new Error("Cantidad demasiado grande para Permit2");
-
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
-  const approveData = encodePermit2Approve(RCOL_ADDRESS, UNIVERSAL_ROUTER, amountWei, 0n);
-  const transferInput = encodePermit2TransferFromInput(RCOL_ADDRESS, BURN_ADDRESSES[0], amountWei);
-  const executeData = encodeUniversalRouterExecute(PERMIT2_TRANSFER_FROM, transferInput, deadline);
-
-  return MiniKitApi.sendTransaction({
-    chainId: 480,
-    transactions: [
-      { to: PERMIT2, value: "0x0", data: approveData },
-      { to: UNIVERSAL_ROUTER, value: "0x0", data: executeData }
-    ]
-  });
+  return sendRcolTransfer(BURN_ADDRESSES[0], amountWei);
 }
 
 // Convierte un monto decimal en unidades enteras (wei) segun los decimales del token.

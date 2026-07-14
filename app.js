@@ -35,6 +35,7 @@ const UNISWAP_V2_ROUTER = "0x541aB7c31A119441eF3575F6973277DE0eF460bd"; // solo 
 const UNIVERSAL_ROUTER = "0x8ac7bee993bb44dab564ea4bc9ea67bf9eb5e743";
 const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 const V2_SWAP_EXACT_IN = "0x08"; // comando del Universal Router
+const PERMIT2_TRANSFER_FROM = "0x02"; // jala ERC20 via Permit2 hacia un destinatario
 const UR_MSG_SENDER = "0x0000000000000000000000000000000000000001"; // constante: el destinatario es quien firma
 // RCOL cobra ~2% de impuesto en cada transferencia (token fee-on-transfer),
 // que getAmountsOut no refleja. El slippage debe cubrir ese impuesto + movimiento.
@@ -1572,6 +1573,32 @@ async function sendRcolTransfer(to, amountWei) {
   return result;
 }
 
+// PUF quema con helper+Permit2 (no transfer ERC20 directo a dead — World lo bloquea).
+// Aqui usamos el mismo patron MiniKit v2 del swap: Permit2.approve + Universal Router.
+function encodePermit2TransferFromInput(token, recipient, amount) {
+  // abi.encode(address token, address recipient, uint160 amount)
+  return "0x" + pad32(token.slice(2)) + pad32(recipient.slice(2)) + pad32(amount.toString(16));
+}
+
+async function burnRcolViaPermit2(amountWei) {
+  const maxUint160 = (1n << 160n) - 1n;
+  if (amountWei <= 0n) throw new Error("Cantidad invalida");
+  if (amountWei > maxUint160) throw new Error("Cantidad demasiado grande para Permit2");
+
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
+  const approveData = encodePermit2Approve(RCOL_ADDRESS, UNIVERSAL_ROUTER, amountWei, 0n);
+  const transferInput = encodePermit2TransferFromInput(RCOL_ADDRESS, BURN_ADDRESSES[0], amountWei);
+  const executeData = encodeUniversalRouterExecute(PERMIT2_TRANSFER_FROM, transferInput, deadline);
+
+  return MiniKitApi.sendTransaction({
+    chainId: 480,
+    transactions: [
+      { to: PERMIT2, value: "0x0", data: approveData },
+      { to: UNIVERSAL_ROUTER, value: "0x0", data: executeData }
+    ]
+  });
+}
+
 // Convierte un monto decimal en unidades enteras (wei) segun los decimales del token.
 function toBaseUnits(amountStr, decimals) {
   const clean = String(amountStr).trim().replace(/,/g, ".");
@@ -2044,7 +2071,7 @@ function setupBurnRcol() {
 
     try {
       setCta("Confirmando quema...", true);
-      const result = await sendRcolTransfer(BURN_TO, amountWei);
+      const result = await burnRcolViaPermit2(amountWei);
       console.log("RCOL burn result:", result);
       showToast(`Quema enviada: ${amountInput.value} RCOL`);
       amountInput.value = "";

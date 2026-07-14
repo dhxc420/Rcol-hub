@@ -1189,7 +1189,9 @@ function setupWorldId() {
 let walletState = null; // { address, username }
 
 function shortAddress(address) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const a = String(address || "");
+  if (a.length < 12) return a || "—";
+  return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
 function renderWallet() {
@@ -1243,6 +1245,7 @@ async function connectWallet() {
     if (!worldIdVerified) showWorldIdModal();
     showToast(username ? `Hola @${username}` : "Wallet conectada");
     updateSendBalance();
+    refreshReceiveQr();
     const sendCta = document.querySelector("#sendCta span");
     if (sendCta) sendCta.textContent = "Enviar RCOL";
     return true;
@@ -1301,6 +1304,13 @@ function setupWallet() {
     Promise.resolve(fetchAllBalances()).finally(() =>
       setTimeout(() => icon?.classList.remove("is-spinning"), 600)
     );
+  });
+  document.querySelector("#walletHistory")?.addEventListener("click", () => {
+    const section = document.querySelector("#txHistory");
+    if (!section) return;
+    renderTxHistory();
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (section.hidden) showToast("Aun no hay actividad para mostrar");
   });
   document.querySelector("#walletAddrCopy")?.addEventListener("click", async () => {
     if (!walletState) return;
@@ -1838,7 +1848,6 @@ function setWalletMode(mode) {
     const sendPanel = document.querySelector("#section-send");
     const burnPanel = document.querySelector("#section-burn");
     const rateRow = document.querySelector("#swapRate");
-    const history = document.querySelector("#txHistory");
     const title = document.querySelector(".swap-view .view-topbar strong");
     const swapBtn = document.querySelector("#modeSwapBtn");
     const sendBtn = document.querySelector("#modeSendBtn");
@@ -1848,11 +1857,10 @@ function setWalletMode(mode) {
     if (sendPanel) sendPanel.hidden = !isSend;
     if (burnPanel) burnPanel.hidden = !isBurn;
     if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
-    if (history) history.hidden = isSend;
-    if (!isSend) renderTxHistory();
+    renderTxHistory();
 
     if (title) {
-      title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar RCOL" : "Swap RCOL";
+      title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar" : "Swap RCOL";
     }
     if (swapBtn) {
       swapBtn.classList.toggle("is-active", isSwap);
@@ -1864,8 +1872,10 @@ function setWalletMode(mode) {
     }
     if (burnBtn) burnBtn.classList.toggle("is-active", isBurn);
 
-    if (isSend) updateSendBalance();
-    else if (isBurn) updateBurnBalance();
+    if (isSend) {
+      updateSendBalance();
+      refreshReceiveQr();
+    } else if (isBurn) updateBurnBalance();
     else scheduleQuote();
     window.lucide?.createIcons?.();
   } catch (error) {
@@ -1886,6 +1896,8 @@ function setupWalletMode() {
 }
 
 let sendBalanceStr = "0";
+let selectedSendContact = null; // { username, walletAddress }
+let payPane = "send"; // send | receive
 
 async function updateSendBalance() {
   const maxButton = document.querySelector("#sendMax");
@@ -1902,6 +1914,160 @@ async function updateSendBalance() {
     valEl.textContent = formatTokenAmount(Number(sendBalanceStr));
   } catch {
     valEl.textContent = "—";
+  }
+}
+
+function setSelectedSendContact(contact) {
+  selectedSendContact = contact;
+  const chip = document.querySelector("#sendContactChip");
+  const nameEl = document.querySelector("#sendContactName");
+  const toInput = document.querySelector("#sendTo");
+  if (!chip || !nameEl || !toInput) return;
+  if (contact?.walletAddress) {
+    toInput.value = contact.walletAddress;
+    nameEl.textContent = contact.username ? `@${contact.username}` : shortAddress(contact.walletAddress);
+    chip.hidden = false;
+  } else {
+    chip.hidden = true;
+    nameEl.textContent = "—";
+  }
+  window.lucide?.createIcons?.();
+}
+
+function setPayPane(mode) {
+  payPane = mode === "receive" ? "receive" : "send";
+  const sendPane = document.querySelector("#paySendPane");
+  const receivePane = document.querySelector("#payReceivePane");
+  const sendBtn = document.querySelector("#payActSend");
+  const receiveBtn = document.querySelector("#payActReceive");
+  const contactsBtn = document.querySelector("#payActContacts");
+
+  if (sendPane) sendPane.hidden = payPane !== "send";
+  if (receivePane) receivePane.hidden = payPane !== "receive";
+  if (sendBtn) {
+    sendBtn.classList.toggle("is-active", payPane === "send");
+    sendBtn.setAttribute("aria-selected", String(payPane === "send"));
+  }
+  if (receiveBtn) {
+    receiveBtn.classList.toggle("is-active", payPane === "receive");
+    receiveBtn.setAttribute("aria-selected", String(payPane === "receive"));
+  }
+  if (contactsBtn) {
+    contactsBtn.classList.toggle("is-active", false);
+    contactsBtn.setAttribute("aria-selected", "false");
+  }
+  if (payPane === "receive") refreshReceiveQr();
+  window.lucide?.createIcons?.();
+}
+
+function buildReceivePayload() {
+  if (!walletState?.address) return null;
+  const amount = String(document.querySelector("#receiveAmount")?.value || "").trim();
+  const params = new URLSearchParams({ to: walletState.address, token: "RCOL" });
+  if (amount && Number(amount) > 0) params.set("amount", amount);
+  return {
+    text: amount && Number(amount) > 0
+      ? `Cobra ${amount} RCOL en RCOL Hub\n${walletState.address}`
+      : `Cobra RCOL en RCOL Hub\n${walletState.address}`,
+    link: `https://rcol-hub.vercel.app/#swap?${params.toString()}`,
+    address: walletState.address,
+    qrValue: amount && Number(amount) > 0
+      ? `https://rcol-hub.vercel.app/#swap?${params.toString()}`
+      : walletState.address
+  };
+}
+
+async function renderQrDataUrl(value) {
+  try {
+    const mod = await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm");
+    const QRCode = mod.default || mod;
+    return await QRCode.toDataURL(value, {
+      width: 220,
+      margin: 2,
+      color: { dark: "#0b1220", light: "#ffffff" }
+    });
+  } catch {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(value)}`;
+  }
+}
+
+async function refreshReceiveQr() {
+  const img = document.querySelector("#receiveQrImg");
+  const empty = document.querySelector("#receiveQrEmpty");
+  const addrText = document.querySelector("#receiveAddrText");
+  const copyBtn = document.querySelector("#receiveCopyBtn");
+  const shareBtn = document.querySelector("#receiveShareBtn");
+  const payload = buildReceivePayload();
+
+  if (!payload) {
+    if (img) {
+      img.hidden = true;
+      img.removeAttribute("src");
+    }
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = "Conecta tu wallet para generar el QR";
+    }
+    if (addrText) addrText.textContent = "—";
+    if (copyBtn) copyBtn.disabled = true;
+    if (shareBtn) shareBtn.disabled = true;
+    return;
+  }
+
+  if (empty) empty.hidden = true;
+  if (addrText) {
+    const amount = String(document.querySelector("#receiveAmount")?.value || "").trim();
+    addrText.textContent = amount && Number(amount) > 0
+      ? `${shortAddress(payload.address)} · ${amount} RCOL`
+      : payload.address;
+  }
+  if (copyBtn) copyBtn.disabled = false;
+  if (shareBtn) shareBtn.disabled = false;
+
+  if (img) {
+    img.hidden = false;
+    img.src = await renderQrDataUrl(payload.qrValue);
+  }
+}
+
+async function pickWorldContact() {
+  if (!worldAppReady || !MiniKitApi) {
+    showToast("Abre el hub en World App para usar contactos");
+    return null;
+  }
+  if (!walletState) {
+    const connected = await connectWallet();
+    if (!connected) return null;
+  }
+  try {
+    if (typeof MiniKitApi.requestPermission === "function") {
+      try {
+        await MiniKitApi.requestPermission({ permission: "contacts" });
+      } catch {
+        // Si el permiso ya esta otorgado o no aplica, seguimos a shareContacts.
+      }
+    }
+    const res = await MiniKitApi.shareContacts({
+      isMultiSelectEnabled: false,
+      inviteMessage: "Enviame RCOL en RCOL Hub"
+    });
+    const data = res?.data || res;
+    const contacts = data?.contacts || [];
+    const contact = contacts[0];
+    const walletAddress = contact?.walletAddress || contact?.address;
+    if (!walletAddress || !isValidAddress(walletAddress)) {
+      showToast("No se selecciono un contacto con wallet");
+      return null;
+    }
+    return {
+      username: contact.username || contact.name || "",
+      walletAddress
+    };
+  } catch (error) {
+    const code = String(error?.code || error?.error_code || error?.message || "");
+    if (/reject|cancel|denied/i.test(code)) showToast("Contactos cancelado");
+    else showToast(`Contactos: ${code || "no disponible"}`, 4000);
+    return null;
   }
 }
 
@@ -1929,6 +2095,73 @@ function setupSendRcol() {
     amountInput.value = sendBalanceStr;
   });
 
+  toInput.addEventListener("input", () => {
+    if (selectedSendContact && toInput.value.trim().toLowerCase() !== selectedSendContact.walletAddress.toLowerCase()) {
+      setSelectedSendContact(null);
+    }
+  });
+
+  document.querySelector("#sendContactClear")?.addEventListener("click", () => {
+    setSelectedSendContact(null);
+    toInput.value = "";
+    toInput.focus();
+  });
+
+  document.querySelector("#sendPickContact")?.addEventListener("click", async () => {
+    const contact = await pickWorldContact();
+    if (!contact) return;
+    setSelectedSendContact(contact);
+    setPayPane("send");
+    showToast(contact.username ? `Contacto @${contact.username}` : "Contacto seleccionado");
+  });
+
+  document.querySelector("#payActSend")?.addEventListener("click", () => setPayPane("send"));
+  document.querySelector("#payActReceive")?.addEventListener("click", () => {
+    setPayPane("receive");
+    if (!walletState) connectWallet().then((ok) => { if (ok) refreshReceiveQr(); });
+  });
+  document.querySelector("#payActContacts")?.addEventListener("click", async () => {
+    const contact = await pickWorldContact();
+    if (!contact) return;
+    setSelectedSendContact(contact);
+    setPayPane("send");
+    showToast(contact.username ? `Contacto @${contact.username}` : "Contacto listo para enviar");
+  });
+
+  document.querySelector("#receiveAmount")?.addEventListener("input", () => {
+    refreshReceiveQr();
+  });
+
+  document.querySelector("#receiveCopyBtn")?.addEventListener("click", async () => {
+    const payload = buildReceivePayload();
+    if (!payload) return;
+    try {
+      await navigator.clipboard.writeText(payload.qrValue);
+      showToast("Cobro copiado");
+    } catch {
+      showToast(payload.address);
+    }
+  });
+
+  document.querySelector("#receiveShareBtn")?.addEventListener("click", async () => {
+    const payload = buildReceivePayload();
+    if (!payload) return;
+    try {
+      if (MiniKitApi?.share) {
+        await MiniKitApi.share({ title: "Cobrar RCOL", text: payload.text, url: payload.link });
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share({ title: "Cobrar RCOL", text: payload.text, url: payload.link });
+        return;
+      }
+      await navigator.clipboard.writeText(payload.link);
+      showToast("Link de cobro copiado");
+    } catch (error) {
+      if (error?.name !== "AbortError") showToast("No se pudo compartir ahora");
+    }
+  });
+
   ctaButton.addEventListener("click", async () => {
     if (!worldAppReady || !MiniKitApi) {
       showToast("Abre el hub en World App para enviar RCOL");
@@ -1944,7 +2177,7 @@ function setupSendRcol() {
 
     const to = String(toInput.value || "").trim();
     if (!isValidAddress(to)) {
-      showToast("Ingresa una direccion valida (0x...)");
+      showToast("Ingresa una direccion valida o elige un contacto");
       toInput.focus();
       return;
     }
@@ -1970,12 +2203,22 @@ function setupSendRcol() {
       setCta("Confirma en tu wallet...", true);
       const result = await sendRcolTransfer(to, amountWei);
       console.log("RCOL send result:", result);
+      const txHash =
+        result?.data?.userOpHash ||
+        result?.userOpHash ||
+        result?.transaction_id ||
+        result?.transactionId ||
+        result?.hash ||
+        null;
+      saveSendToHistory(amountInput.value, to, txHash, selectedSendContact?.username || "");
       showToast(`Envio enviado: ${amountInput.value} RCOL`);
       amountInput.value = "";
+      renderTxHistory();
       setTimeout(() => {
         updateSendBalance();
         updateSwapBalance();
         if (typeof fetchAllBalances === "function") fetchAllBalances();
+        renderTxHistory();
       }, 12000);
     } catch (error) {
       console.error("Send RCOL error:", error);
@@ -1987,8 +2230,26 @@ function setupSendRcol() {
     }
   });
 
+  setPayPane("send");
   syncCtaLabel();
   updateSendBalance();
+  refreshReceiveQr();
+}
+
+function saveSendToHistory(amount, to, txHash, username) {
+  try {
+    let history = loadTxHistory();
+    history.unshift({
+      type: "send",
+      amount: Number(amount),
+      to,
+      username: username || "",
+      hash: txHash,
+      time: Date.now()
+    });
+    if (history.length > TX_HISTORY_MAX) history = history.slice(0, TX_HISTORY_MAX);
+    localStorage.setItem(TX_HISTORY_KEY, JSON.stringify(history));
+  } catch {}
 }
 
 const BURN_TO = BURN_ADDRESSES[0];
@@ -2295,6 +2556,17 @@ function localTxToItem(tx) {
       rcolOnly: false
     };
   }
+  if (tx.type === "send") {
+    return {
+      type: "send",
+      hash: tx.hash,
+      time: tx.time,
+      amount: tx.amount,
+      to: tx.to,
+      username: tx.username || "",
+      rcolOnly: false
+    };
+  }
   return {
     type: "swap",
     buy: tx.toSym === "RCOL",
@@ -2310,7 +2582,8 @@ function localTxToItem(tx) {
 
 function txItemHtml(item) {
   const isBurn = item.type === "burn";
-  const buy = !isBurn && item.buy;
+  const isSend = item.type === "send";
+  const buy = !isBurn && !isSend && item.buy;
   const explorerHref = item.hash
     ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${item.hash}`
     : null;
@@ -2332,6 +2605,17 @@ function txItemHtml(item) {
     badge = "Quema";
     icon = "trash-2";
     rowClass = "tx-item--burn";
+  } else if (isSend) {
+    const amt = item.amount != null ? formatTokenAmount(Number(item.amount)) : "?";
+    const dest = item.username
+      ? `@${item.username}`
+      : item.to
+        ? shortAddress(item.to)
+        : "destino";
+    pairHtml = `<strong>−${escapeHtml(amt)} RCOL</strong><span class="tx-item__sub">A ${escapeHtml(dest)}</span>`;
+    badge = "Enviado";
+    icon = "send";
+    rowClass = "tx-item--send";
   } else if (item.rcolOnly) {
     const amt = item.rcolAmount != null ? formatTokenAmount(Number(item.rcolAmount)) : "?";
     pairHtml = `<strong>${buy ? "+" : "−"}${escapeHtml(amt)} RCOL</strong>`;
@@ -2351,9 +2635,11 @@ function txItemHtml(item) {
 
   const badgeClass = isBurn
     ? "tx-item__badge--burn"
-    : buy
-      ? "tx-item__badge--buy"
-      : "tx-item__badge--sell";
+    : isSend
+      ? "tx-item__badge--send"
+      : buy
+        ? "tx-item__badge--buy"
+        : "tx-item__badge--sell";
 
   return `
     <div class="tx-item ${rowClass}">
@@ -2382,8 +2668,7 @@ function paintTxList(items) {
   const section = document.querySelector("#txHistory");
   const list = document.querySelector("#txHistoryList");
   if (!section || !list) return;
-  const sendMode = !document.querySelector("#section-send")?.hidden;
-  if (!items.length || sendMode) { section.hidden = true; return; }
+  if (!items.length) { section.hidden = true; return; }
   section.hidden = false;
   list.innerHTML = items.slice(0, TX_HISTORY_MAX).map(txItemHtml).join("");
   window.lucide?.createIcons?.();
@@ -2616,6 +2901,7 @@ function renderWalletCard() {
   const nameEl = document.querySelector("#swapWalletLabel");
   const connectBtn = document.querySelector("#swapConnectBtn");
   const refreshBtn = document.querySelector("#walletRefresh");
+  const historyBtn = document.querySelector("#walletHistory");
   const balancesEl = document.querySelector("#swapBalances");
   const totalEl = document.querySelector("#walletTotal");
   const emptyEl = document.querySelector("#walletEmpty");
@@ -2627,6 +2913,7 @@ function renderWalletCard() {
     if (nameEl) nameEl.textContent = walletState.username ? `@${walletState.username}` : "Mi portafolio";
     if (connectBtn) connectBtn.hidden = true;
     if (refreshBtn) refreshBtn.hidden = false;
+    if (historyBtn) historyBtn.hidden = false;
     if (emptyEl) emptyEl.hidden = true;
     setWalletAvatar(walletState.address, walletState.profilePictureUrl);
     if (avatarEl && (walletState.username || walletState.address)) {
@@ -2647,6 +2934,7 @@ function renderWalletCard() {
     if (nameEl) nameEl.textContent = "Tu portafolio RCOL";
     if (connectBtn) connectBtn.hidden = false;
     if (refreshBtn) refreshBtn.hidden = true;
+    if (historyBtn) historyBtn.hidden = true;
     if (emptyEl) emptyEl.hidden = false;
     if (totalEl) totalEl.hidden = true;
     setWalletAvatar(null, null);
@@ -2691,11 +2979,36 @@ function setupViews() {
     if (isSwap) renderSwapView();
   };
 
+  const applyPayDeepLink = () => {
+    const raw = location.hash || "";
+    if (!raw.startsWith("#swap")) return;
+    const query = raw.includes("?") ? raw.slice(raw.indexOf("?") + 1) : "";
+    if (!query) return;
+    const params = new URLSearchParams(query);
+    const to = String(params.get("to") || "").trim();
+    const amount = String(params.get("amount") || "").trim();
+    if (!isValidAddress(to) && !(amount && Number(amount) > 0)) return;
+    setWalletMode("send");
+    setPayPane("send");
+    if (isValidAddress(to)) {
+      const toInput = document.querySelector("#sendTo");
+      if (toInput) toInput.value = to;
+      setSelectedSendContact(null);
+    }
+    if (amount && Number(amount) > 0) {
+      const amountInput = document.querySelector("#sendAmount");
+      if (amountInput) amountInput.value = amount;
+    }
+    showToast("Cobro cargado: revisa destino y cantidad");
+  };
+
   const route = () => {
-    const hash = location.hash;
-    if (hash === "#nft") showView("nft");
-    else if (hash === "#swap") showView("swap");
-    else showView("hub");
+    const hash = location.hash || "";
+    if (hash === "#nft" || hash.startsWith("#nft?")) showView("nft");
+    else if (hash === "#swap" || hash.startsWith("#swap?")) {
+      showView("swap");
+      applyPayDeepLink();
+    } else showView("hub");
   };
 
   window.addEventListener("hashchange", route);

@@ -258,9 +258,14 @@
               </div>
             </div>
             <button class="swap-wallet-connect" id="swapConnectBtn" type="button">Conectar</button>
-            <button class="wallet-card__refresh" id="walletRefresh" type="button" aria-label="Actualizar saldos" hidden>
-              <i data-lucide="refresh-cw" aria-hidden="true"></i>
-            </button>
+            <div class="wallet-card__tools">
+              <button class="wallet-card__tool" id="walletHistory" type="button" aria-label="Ver historial" hidden>
+                <i data-lucide="history" aria-hidden="true"></i>
+              </button>
+              <button class="wallet-card__tool wallet-card__refresh" id="walletRefresh" type="button" aria-label="Actualizar saldos" hidden>
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
 
           <div class="wallet-card__total" id="walletTotal" hidden>
@@ -284,7 +289,7 @@
           </button>
           <button class="wallet-mode__btn" id="modeSendBtn" type="button" role="tab" aria-selected="false" data-mode="send">
             <i data-lucide="send" aria-hidden="true"></i>
-            <span>Enviar RCOL</span>
+            <span>Enviar</span>
           </button>
         </div>
 
@@ -332,10 +337,35 @@
         </div>
 
         <div class="panel send-panel" id="section-send" hidden>
-          <div class="send-box">
+          <div class="pay-actions" role="tablist" aria-label="Acciones de pago">
+            <button class="pay-action is-active" id="payActSend" type="button" role="tab" aria-selected="true" data-pay="send">
+              <i data-lucide="send" aria-hidden="true"></i>
+              <span>Enviar</span>
+            </button>
+            <button class="pay-action" id="payActReceive" type="button" role="tab" aria-selected="false" data-pay="receive">
+              <i data-lucide="qr-code" aria-hidden="true"></i>
+              <span>Cobrar QR</span>
+            </button>
+            <button class="pay-action" id="payActContacts" type="button" role="tab" aria-selected="false" data-pay="contacts">
+              <i data-lucide="user" aria-hidden="true"></i>
+              <span>Contactos</span>
+            </button>
+          </div>
+
+          <div class="send-box" id="paySendPane">
             <div class="swap-field">
-              <label for="sendTo">Direccion destino</label>
-              <input id="sendTo" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x..." />
+              <div class="swap-field__head">
+                <label for="sendTo">Destino</label>
+                <button class="swap-bal" id="sendPickContact" type="button">
+                  Contacto World
+                </button>
+              </div>
+              <input id="sendTo" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x... o elige un contacto" />
+              <p class="send-contact-chip" id="sendContactChip" hidden>
+                <i data-lucide="user" aria-hidden="true"></i>
+                <span id="sendContactName">—</span>
+                <button type="button" id="sendContactClear" aria-label="Quitar contacto">&times;</button>
+              </p>
             </div>
             <div class="swap-field">
               <div class="swap-field__head">
@@ -356,7 +386,36 @@
               <i data-lucide="send" aria-hidden="true"></i>
               <span>Conecta tu wallet</span>
             </button>
-            <p class="panel-note">Recuerda: RCOL cobra ~2% de impuesto en cada transferencia. El destinatario recibe un poco menos.</p>
+            <p class="panel-note">Puedes pegar una direccion 0x... o elegir un contacto de World App. RCOL cobra ~2% de impuesto por transferencia.</p>
+          </div>
+
+          <div class="receive-box" id="payReceivePane" hidden>
+            <div class="swap-field">
+              <label for="receiveAmount">Monto opcional (RCOL)</label>
+              <div class="swap-row">
+                <input id="receiveAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
+                <span class="token-pill" aria-hidden="true">
+                  <img src="./assets/rcol-coin.png" alt="" />
+                  RCOL
+                </span>
+              </div>
+            </div>
+            <div class="receive-qr" id="receiveQrWrap">
+              <img id="receiveQrImg" alt="Codigo QR para cobrar" width="220" height="220" hidden />
+              <p class="receive-qr__empty" id="receiveQrEmpty">Conecta tu wallet para generar el QR</p>
+            </div>
+            <p class="receive-addr" id="receiveAddrText">—</p>
+            <div class="receive-actions">
+              <button class="ghost-button" id="receiveCopyBtn" type="button" disabled>
+                <i data-lucide="copy" aria-hidden="true"></i>
+                <span>Copiar</span>
+              </button>
+              <button class="swap-cta send-cta" id="receiveShareBtn" type="button" disabled>
+                <i data-lucide="share-2" aria-hidden="true"></i>
+                <span>Compartir</span>
+              </button>
+            </div>
+            <p class="panel-note">El QR incluye tu address de Worldchain. Si pones monto, tambien va en el link de cobro.</p>
           </div>
         </div>
 

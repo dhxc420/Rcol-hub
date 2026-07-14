@@ -1174,12 +1174,160 @@ html[data-theme="light"] .swap-fee {
 
 .send-panel {
   margin-top: 0;
+  display: grid;
+  gap: 12px;
 }
 
 .send-panel[hidden],
 .swap-panel[hidden],
 .burn-panel[hidden] {
   display: none;
+}
+
+.pay-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pay-action {
+  min-height: 72px;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  align-content: center;
+  padding: 10px 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 120ms ease;
+}
+
+.pay-action svg {
+  width: 20px;
+  height: 20px;
+  color: var(--gold);
+}
+
+.pay-action.is-active {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--line));
+  background: color-mix(in srgb, var(--gold-bright, #f8d66d) 14%, transparent);
+  color: var(--ink);
+}
+
+.pay-action:active {
+  transform: scale(0.97);
+}
+
+.send-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.send-contact-chip[hidden] {
+  display: none;
+}
+
+.send-contact-chip svg {
+  width: 14px;
+  height: 14px;
+  color: var(--gold);
+}
+
+.send-contact-chip button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.receive-box {
+  display: grid;
+  gap: 12px;
+}
+
+.receive-box[hidden],
+.send-box[hidden] {
+  display: none;
+}
+
+.receive-qr {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line-soft);
+  background: #fff;
+}
+
+.receive-qr img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+}
+
+.receive-qr__empty {
+  margin: 0;
+  color: #666;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.receive-addr {
+  margin: 0;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.receive-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ghost-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ghost-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ghost-button:disabled,
+.receive-actions .swap-cta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .wallet-mode {
@@ -2568,6 +2716,13 @@ svg {
   transform: scale(0.95);
 }
 
+.wallet-card__tools {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wallet-card__tool,
 .wallet-card__refresh {
   flex-shrink: 0;
   width: 38px;
@@ -2582,8 +2737,14 @@ svg {
   transition: transform 120ms ease;
 }
 
+.wallet-card__tool:active,
 .wallet-card__refresh:active {
   transform: scale(0.92);
+}
+
+.wallet-card__tool[hidden],
+.wallet-card__refresh[hidden] {
+  display: none;
 }
 
 .wallet-card__refresh.is-spinning svg {
@@ -2878,6 +3039,19 @@ html[data-theme="light"] .wallet-token__init {
   color: #ff6b84;
 }
 
+.tx-item--send .tx-item__icon {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold);
+}
+
+.tx-item__sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
 .tx-item__icon svg {
   width: 18px;
   height: 18px;
@@ -2948,6 +3122,11 @@ svg.tx-item__arrow {
 .tx-item__badge--burn {
   background: color-mix(in srgb, #ff4d6d 18%, transparent);
   color: #ff6b84;
+}
+
+.tx-item__badge--send {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold);
 }
 
 .tx-item__link {

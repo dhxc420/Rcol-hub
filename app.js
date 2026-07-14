@@ -1748,6 +1748,7 @@ function setupSwap() {
   });
 
   setupSendRcol();
+  setupBurnRcol();
   setupWalletMode();
   updateSwapTeaser();
   refreshSwapRate();
@@ -1756,31 +1757,40 @@ function setupSwap() {
 
 function setWalletMode(mode) {
   const isSend = mode === "send";
+  const isBurn = mode === "burn";
+  const isSwap = !isSend && !isBurn;
   const swapPanel = document.querySelector("#section-swap");
   const sendPanel = document.querySelector("#section-send");
+  const burnPanel = document.querySelector("#section-burn");
   const rateRow = document.querySelector("#swapRate");
   const history = document.querySelector("#txHistory");
   const title = document.querySelector(".swap-view .view-topbar strong");
   const swapBtn = document.querySelector("#modeSwapBtn");
   const sendBtn = document.querySelector("#modeSendBtn");
+  const burnBtn = document.querySelector("#modeBurnBtn");
 
-  if (swapPanel) swapPanel.hidden = isSend;
+  if (swapPanel) swapPanel.hidden = !isSwap;
   if (sendPanel) sendPanel.hidden = !isSend;
-  if (rateRow) rateRow.hidden = isSend || !rateRow.dataset.hasRate;
-  if (history && isSend) history.hidden = true;
-  if (!isSend) renderTxHistory();
+  if (burnPanel) burnPanel.hidden = !isBurn;
+  if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
+  if (history) history.hidden = !isSwap;
+  if (isSwap) renderTxHistory();
 
-  if (title) title.textContent = isSend ? "Enviar RCOL" : "Swap RCOL";
+  if (title) {
+    title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar RCOL" : "Swap RCOL";
+  }
   if (swapBtn) {
-    swapBtn.classList.toggle("is-active", !isSend);
-    swapBtn.setAttribute("aria-selected", String(!isSend));
+    swapBtn.classList.toggle("is-active", isSwap);
+    swapBtn.setAttribute("aria-selected", String(isSwap));
   }
   if (sendBtn) {
     sendBtn.classList.toggle("is-active", isSend);
     sendBtn.setAttribute("aria-selected", String(isSend));
   }
+  if (burnBtn) burnBtn.classList.toggle("is-active", isBurn);
 
   if (isSend) updateSendBalance();
+  else if (isBurn) updateBurnBalance();
   else scheduleQuote();
   window.lucide?.createIcons?.();
 }
@@ -1788,6 +1798,7 @@ function setWalletMode(mode) {
 function setupWalletMode() {
   document.querySelector("#modeSwapBtn")?.addEventListener("click", () => setWalletMode("swap"));
   document.querySelector("#modeSendBtn")?.addEventListener("click", () => setWalletMode("send"));
+  document.querySelector("#modeBurnBtn")?.addEventListener("click", () => setWalletMode("burn"));
   setWalletMode("swap");
 }
 
@@ -1899,6 +1910,107 @@ function setupSendRcol() {
 
   syncCtaLabel();
   updateSendBalance();
+}
+
+const BURN_TO = BURN_ADDRESSES[0];
+let burnBalanceStr = "0";
+
+async function updateBurnBalance() {
+  const maxButton = document.querySelector("#burnMax");
+  const valEl = document.querySelector("#burnBalanceVal");
+  if (!maxButton || !valEl) return;
+  if (!walletState) {
+    maxButton.hidden = true;
+    return;
+  }
+  maxButton.hidden = false;
+  try {
+    const raw = await getTokenBalanceRaw(RCOL_ADDRESS, walletState.address);
+    burnBalanceStr = fromBaseUnits(raw, RCOL_DECIMALS);
+    valEl.textContent = formatTokenAmount(Number(burnBalanceStr));
+  } catch {
+    valEl.textContent = "—";
+  }
+}
+
+function setupBurnRcol() {
+  const amountInput = document.querySelector("#burnAmount");
+  const ctaButton = document.querySelector("#burnCta");
+  const maxButton = document.querySelector("#burnMax");
+  if (!amountInput || !ctaButton) return;
+
+  const ctaLabel = ctaButton.querySelector("span");
+  const setCta = (text, disabled) => {
+    if (ctaLabel) ctaLabel.textContent = text;
+    ctaButton.disabled = disabled;
+    ctaButton.classList.toggle("is-busy", disabled);
+  };
+
+  const syncCtaLabel = () => {
+    if (ctaButton.classList.contains("is-busy")) return;
+    setCta(walletState ? "Quemar RCOL" : "Conecta tu wallet", false);
+  };
+
+  maxButton?.addEventListener("click", () => {
+    if (!walletState || !(Number(burnBalanceStr) > 0)) return;
+    amountInput.value = burnBalanceStr;
+  });
+
+  ctaButton.addEventListener("click", async () => {
+    if (!worldAppReady || !MiniKitApi) {
+      showToast("Abre el hub en World App para quemar RCOL");
+      return;
+    }
+
+    if (!walletState) {
+      const connected = await connectWallet();
+      if (!connected) return;
+      syncCtaLabel();
+      await updateBurnBalance();
+    }
+
+    const amount = parseFloat(amountInput.value);
+    if (!(amount > 0)) {
+      showToast("Ingresa una cantidad para quemar");
+      amountInput.focus();
+      return;
+    }
+
+    const amountWei = toBaseUnits(amountInput.value, RCOL_DECIMALS);
+    if (amountWei <= 0n) {
+      showToast("Cantidad invalida");
+      return;
+    }
+
+    try {
+      setCta("Confirma en tu wallet...", true);
+      const transferData = encodeErc20Transfer(BURN_TO, amountWei);
+      const result = await MiniKitApi.sendTransaction({
+        chainId: 480,
+        transactions: [{ to: RCOL_ADDRESS, data: transferData }]
+      });
+      console.log("RCOL burn result:", result);
+      showToast(`Quema enviada: ${amountInput.value} RCOL`);
+      amountInput.value = "";
+      setTimeout(() => {
+        updateBurnBalance();
+        updateSendBalance();
+        updateSwapBalance();
+        if (typeof fetchAllBalances === "function") fetchAllBalances();
+        if (typeof fetchBurned === "function") fetchBurned();
+      }, 12000);
+    } catch (error) {
+      console.error("Burn RCOL error:", error);
+      const message = error?.message || error?.error_code || String(error);
+      if (/reject|cancel|denied/i.test(message)) showToast("Quema cancelada");
+      else showToast(`Quema fallo: ${message}`);
+    } finally {
+      syncCtaLabel();
+    }
+  });
+
+  syncCtaLabel();
+  updateBurnBalance();
 }
 
 function scheduleQuote() {
@@ -2127,7 +2239,8 @@ function paintTxList(items) {
   const list = document.querySelector("#txHistoryList");
   if (!section || !list) return;
   const sendMode = !document.querySelector("#section-send")?.hidden;
-  if (!items.length || sendMode) { section.hidden = true; return; }
+  const burnMode = !document.querySelector("#section-burn")?.hidden;
+  if (!items.length || sendMode || burnMode) { section.hidden = true; return; }
   section.hidden = false;
   list.innerHTML = items.slice(0, TX_HISTORY_MAX).map(txItemHtml).join("");
   window.lucide?.createIcons?.();
@@ -2295,7 +2408,8 @@ function setSwapRate(rateText, shortText) {
     rowText.textContent = `${rateText} · Uniswap v2`;
     row.dataset.hasRate = "1";
     const sendMode = !document.querySelector("#section-send")?.hidden;
-    row.hidden = Boolean(sendMode);
+    const burnMode = !document.querySelector("#section-burn")?.hidden;
+    row.hidden = Boolean(sendMode || burnMode);
   }
 }
 
@@ -2313,8 +2427,11 @@ function renderSwapView() {
   refreshSwapRate();
   scheduleQuote();
   updateSendBalance();
+  updateBurnBalance();
   const sendCta = document.querySelector("#sendCta span");
   if (sendCta) sendCta.textContent = walletState ? "Enviar RCOL" : "Conecta tu wallet";
+  const burnCta = document.querySelector("#burnCta span");
+  if (burnCta) burnCta.textContent = walletState ? "Quemar RCOL" : "Conecta tu wallet";
 }
 
 // Fallback visual si World no entrega foto de perfil.

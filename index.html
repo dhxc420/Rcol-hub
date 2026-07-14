@@ -288,6 +288,11 @@
           </button>
         </div>
 
+        <button class="burn-mode-btn" id="modeBurnBtn" type="button">
+          <i data-lucide="flame" aria-hidden="true"></i>
+          <span>Quemar RCOL</span>
+        </button>
+
         <div class="panel swap-panel" id="section-swap">
           <div class="swap-box">
             <div class="swap-field">
@@ -352,6 +357,31 @@
               <span>Conecta tu wallet</span>
             </button>
             <p class="panel-note">Recuerda: RCOL cobra ~2% de impuesto en cada transferencia. El destinatario recibe un poco menos.</p>
+          </div>
+        </div>
+
+        <div class="panel burn-panel" id="section-burn" hidden>
+          <div class="send-box burn-box">
+            <div class="swap-field">
+              <div class="swap-field__head">
+                <label for="burnAmount">Cantidad a quemar</label>
+                <button class="swap-bal" id="burnMax" type="button" hidden>
+                  Saldo: <span id="burnBalanceVal">0</span> &middot; MAX
+                </button>
+              </div>
+              <div class="swap-row">
+                <input id="burnAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.0" autocomplete="off" />
+                <span class="token-pill" aria-hidden="true">
+                  <img src="./assets/rcol-coin.png" alt="" />
+                  RCOL
+                </span>
+              </div>
+            </div>
+            <button class="swap-cta burn-cta" id="burnCta" type="button">
+              <i data-lucide="flame" aria-hidden="true"></i>
+              <span>Conecta tu wallet</span>
+            </button>
+            <p class="panel-note burn-note">Accion irreversible: los RCOL van a la direccion dead y salen de circulacion. Aplica el ~2% de impuesto de transferencia.</p>
           </div>
         </div>
 

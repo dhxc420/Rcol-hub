@@ -1526,6 +1526,52 @@ function encodeErc20Transfer(to, amount) {
   return `0xa9059cbb${pad32(to.slice(2))}${pad32(amount.toString(16))}`;
 }
 
+function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
+  const code = String(
+    error?.code || error?.error_code || error?.details?.error_code || ""
+  ).trim();
+  const map = {
+    user_rejected: "Cancelado",
+    simulation_failed: "La simulacion fallo (saldo, gas o el token rechazo el envio)",
+    transaction_failed: "La transaccion fallo en cadena",
+    generic_error: "World App rechazo la operacion",
+    invalid_contract: "Contrato no permitido en el portal de World",
+    malicious_operation: "World App bloqueo la operacion por seguridad",
+    disallowed_operation: "Operacion no permitida por World App",
+    validation_error: "La transaccion no paso la validacion",
+    input_error: "Datos de transaccion invalidos",
+    daily_tx_limit_reached: "Limite diario de transacciones alcanzado",
+    invalid_operation: "Operacion invalida"
+  };
+  if (code && map[code]) return `${map[code]} (${code})`;
+  const message = String(error?.message || error || "").trim();
+  if (/reject|cancel|denied/i.test(message)) return "Cancelado";
+  if (message) return message;
+  return fallback;
+}
+
+async function sendRcolTransfer(to, amountWei) {
+  const transferData = encodeErc20Transfer(to, amountWei);
+  // Preflight: si revierte on-chain, no abrimos MiniKit con un fallo opaco.
+  if (walletState?.address) {
+    try {
+      await ethCall(RCOL_ADDRESS, transferData, walletState.address);
+    } catch (error) {
+      const detail = String(error?.message || error || "");
+      throw new Error(
+        /insufficient|transfer amount|exceeds balance|ERC20/i.test(detail)
+          ? "Saldo insuficiente o el token rechazo la transferencia"
+          : `Simulacion fallo: ${detail || "revert"}`
+      );
+    }
+  }
+  const result = await MiniKitApi.sendTransaction({
+    chainId: 480,
+    transactions: [{ to: RCOL_ADDRESS, value: "0x0", data: transferData }]
+  });
+  return result;
+}
+
 // Convierte un monto decimal en unidades enteras (wei) segun los decimales del token.
 function toBaseUnits(amountStr, decimals) {
   const clean = String(amountStr).trim().replace(/,/g, ".");
@@ -1554,11 +1600,12 @@ function buildPath(fromSym, toSym) {
   return [a, WLD_ADDRESS, b];
 }
 
-async function ethCall(to, data) {
+async function ethCall(to, data, from) {
+  const tx = from ? { from, to, data } : { to, data };
   const response = await fetch(WORLDCHAIN_RPC, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] })
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [tx, "latest"] })
   });
   const json = await response.json();
   if (json.error) throw new Error(json.error.message || "eth_call error");
@@ -1756,49 +1803,58 @@ function setupSwap() {
 }
 
 function setWalletMode(mode) {
-  const isSend = mode === "send";
-  const isBurn = mode === "burn";
-  const isSwap = !isSend && !isBurn;
-  const swapPanel = document.querySelector("#section-swap");
-  const sendPanel = document.querySelector("#section-send");
-  const burnPanel = document.querySelector("#section-burn");
-  const rateRow = document.querySelector("#swapRate");
-  const history = document.querySelector("#txHistory");
-  const title = document.querySelector(".swap-view .view-topbar strong");
-  const swapBtn = document.querySelector("#modeSwapBtn");
-  const sendBtn = document.querySelector("#modeSendBtn");
-  const burnBtn = document.querySelector("#modeBurnBtn");
+  try {
+    const isSend = mode === "send";
+    const isBurn = mode === "burn";
+    const isSwap = !isSend && !isBurn;
+    const swapPanel = document.querySelector("#section-swap");
+    const sendPanel = document.querySelector("#section-send");
+    const burnPanel = document.querySelector("#section-burn");
+    const rateRow = document.querySelector("#swapRate");
+    const history = document.querySelector("#txHistory");
+    const title = document.querySelector(".swap-view .view-topbar strong");
+    const swapBtn = document.querySelector("#modeSwapBtn");
+    const sendBtn = document.querySelector("#modeSendBtn");
+    const burnBtn = document.querySelector("#modeBurnBtn");
 
-  if (swapPanel) swapPanel.hidden = !isSwap;
-  if (sendPanel) sendPanel.hidden = !isSend;
-  if (burnPanel) burnPanel.hidden = !isBurn;
-  if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
-  if (history) history.hidden = !isSwap;
-  if (isSwap) renderTxHistory();
+    if (swapPanel) swapPanel.hidden = !isSwap;
+    if (sendPanel) sendPanel.hidden = !isSend;
+    if (burnPanel) burnPanel.hidden = !isBurn;
+    if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
+    if (history) history.hidden = !isSwap;
+    if (isSwap) renderTxHistory();
 
-  if (title) {
-    title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar RCOL" : "Swap RCOL";
-  }
-  if (swapBtn) {
-    swapBtn.classList.toggle("is-active", isSwap);
-    swapBtn.setAttribute("aria-selected", String(isSwap));
-  }
-  if (sendBtn) {
-    sendBtn.classList.toggle("is-active", isSend);
-    sendBtn.setAttribute("aria-selected", String(isSend));
-  }
-  if (burnBtn) burnBtn.classList.toggle("is-active", isBurn);
+    if (title) {
+      title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar RCOL" : "Swap RCOL";
+    }
+    if (swapBtn) {
+      swapBtn.classList.toggle("is-active", isSwap);
+      swapBtn.setAttribute("aria-selected", String(isSwap));
+    }
+    if (sendBtn) {
+      sendBtn.classList.toggle("is-active", isSend);
+      sendBtn.setAttribute("aria-selected", String(isSend));
+    }
+    if (burnBtn) burnBtn.classList.toggle("is-active", isBurn);
 
-  if (isSend) updateSendBalance();
-  else if (isBurn) updateBurnBalance();
-  else scheduleQuote();
-  window.lucide?.createIcons?.();
+    if (isSend) updateSendBalance();
+    else if (isBurn) updateBurnBalance();
+    else scheduleQuote();
+    window.lucide?.createIcons?.();
+  } catch (error) {
+    console.error("setWalletMode error:", error);
+    showToast(String(error?.message || error || "No se pudo cambiar de modo"), 4000);
+  }
 }
 
 function setupWalletMode() {
   document.querySelector("#modeSwapBtn")?.addEventListener("click", () => setWalletMode("swap"));
   document.querySelector("#modeSendBtn")?.addEventListener("click", () => setWalletMode("send"));
-  document.querySelector("#modeBurnBtn")?.addEventListener("click", () => setWalletMode("burn"));
+  document.querySelector("#modeBurnBtn")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setWalletMode("burn");
+  });
   setWalletMode("swap");
 }
 
@@ -1885,11 +1941,7 @@ function setupSendRcol() {
 
     try {
       setCta("Confirma en tu wallet...", true);
-      const transferData = encodeErc20Transfer(to, amountWei);
-      const result = await MiniKitApi.sendTransaction({
-        chainId: 480,
-        transactions: [{ to: RCOL_ADDRESS, data: transferData }]
-      });
+      const result = await sendRcolTransfer(to, amountWei);
       console.log("RCOL send result:", result);
       showToast(`Envio enviado: ${amountInput.value} RCOL`);
       amountInput.value = "";
@@ -1900,9 +1952,9 @@ function setupSendRcol() {
       }, 12000);
     } catch (error) {
       console.error("Send RCOL error:", error);
-      const message = error?.message || error?.error_code || String(error);
-      if (/reject|cancel|denied/i.test(message)) showToast("Envio cancelado");
-      else showToast(`Envio fallo: ${message}`);
+      const message = minikitTxErrorMessage(error, "Envio fallo");
+      if (message === "Cancelado") showToast("Envio cancelado");
+      else showToast(message, 4500);
     } finally {
       syncCtaLabel();
     }
@@ -1953,7 +2005,10 @@ function setupBurnRcol() {
 
   maxButton?.addEventListener("click", () => {
     if (!walletState || !(Number(burnBalanceStr) > 0)) return;
-    amountInput.value = burnBalanceStr;
+    // Deja ~3% de margen por el impuesto ~2% y redondeo.
+    const raw = toBaseUnits(burnBalanceStr, RCOL_DECIMALS);
+    const safe = (raw * 97n) / 100n;
+    amountInput.value = fromBaseUnits(safe, RCOL_DECIMALS);
   });
 
   ctaButton.addEventListener("click", async () => {
@@ -1982,13 +2037,14 @@ function setupBurnRcol() {
       return;
     }
 
+    const ok = window.confirm(
+      `Vas a quemar ${amountInput.value} RCOL de forma irreversible.\n\nSe envian a la direccion dead y salen de circulacion. Continuar?`
+    );
+    if (!ok) return;
+
     try {
-      setCta("Confirma en tu wallet...", true);
-      const transferData = encodeErc20Transfer(BURN_TO, amountWei);
-      const result = await MiniKitApi.sendTransaction({
-        chainId: 480,
-        transactions: [{ to: RCOL_ADDRESS, data: transferData }]
-      });
+      setCta("Confirmando quema...", true);
+      const result = await sendRcolTransfer(BURN_TO, amountWei);
       console.log("RCOL burn result:", result);
       showToast(`Quema enviada: ${amountInput.value} RCOL`);
       amountInput.value = "";
@@ -2001,9 +2057,9 @@ function setupBurnRcol() {
       }, 12000);
     } catch (error) {
       console.error("Burn RCOL error:", error);
-      const message = error?.message || error?.error_code || String(error);
-      if (/reject|cancel|denied/i.test(message)) showToast("Quema cancelada");
-      else showToast(`Quema fallo: ${message}`);
+      const message = minikitTxErrorMessage(error, "Quema fallo");
+      if (message === "Cancelado") showToast("Quema cancelada");
+      else showToast(message, 5000);
     } finally {
       syncCtaLabel();
     }

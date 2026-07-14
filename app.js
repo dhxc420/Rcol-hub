@@ -1848,8 +1848,8 @@ function setWalletMode(mode) {
     if (sendPanel) sendPanel.hidden = !isSend;
     if (burnPanel) burnPanel.hidden = !isBurn;
     if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
-    if (history) history.hidden = !isSwap;
-    if (isSwap) renderTxHistory();
+    if (history) history.hidden = isSend;
+    if (!isSend) renderTxHistory();
 
     if (title) {
       title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar RCOL" : "Swap RCOL";
@@ -2073,14 +2073,25 @@ function setupBurnRcol() {
       setCta("Confirmando quema...", true);
       const result = await burnRcolViaPermit2(amountWei);
       console.log("RCOL burn result:", result);
+      const burnedAmount = Number(amountInput.value);
+      const txHash =
+        result?.data?.userOpHash ||
+        result?.userOpHash ||
+        result?.transaction_id ||
+        result?.transactionId ||
+        result?.hash ||
+        null;
+      saveBurnToHistory(burnedAmount, txHash);
       showToast(`Quema enviada: ${amountInput.value} RCOL`);
       amountInput.value = "";
+      renderTxHistory();
       setTimeout(() => {
         updateBurnBalance();
         updateSendBalance();
         updateSwapBalance();
         if (typeof fetchAllBalances === "function") fetchAllBalances();
         if (typeof fetchBurned === "function") fetchBurned();
+        renderTxHistory();
       }, 12000);
     } catch (error) {
       console.error("Burn RCOL error:", error);
@@ -2196,11 +2207,17 @@ const TX_HISTORY_MAX = 20;
 // El historial completo se reconstruye luego desde la blockchain (fetchOnchainSwaps).
 function saveTxToHistory(fromSym, toSym, amountIn, amountOut, txHash) {
   try {
-    let history = [];
-    const raw = localStorage.getItem(TX_HISTORY_KEY);
-    if (raw) history = JSON.parse(raw);
-    if (!Array.isArray(history)) history = [];
-    history.unshift({ fromSym, toSym, amountIn, amountOut, hash: txHash, time: Date.now() });
+    let history = loadTxHistory();
+    history.unshift({ type: "swap", fromSym, toSym, amountIn, amountOut, hash: txHash, time: Date.now() });
+    if (history.length > TX_HISTORY_MAX) history = history.slice(0, TX_HISTORY_MAX);
+    localStorage.setItem(TX_HISTORY_KEY, JSON.stringify(history));
+  } catch {}
+}
+
+function saveBurnToHistory(amount, txHash) {
+  try {
+    let history = loadTxHistory();
+    history.unshift({ type: "burn", amount, hash: txHash, time: Date.now() });
     if (history.length > TX_HISTORY_MAX) history = history.slice(0, TX_HISTORY_MAX);
     localStorage.setItem(TX_HISTORY_KEY, JSON.stringify(history));
   } catch {}
@@ -2229,10 +2246,9 @@ function formatRelativeTime(timestamp) {
 }
 
 const EXPLORER_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2";
+const BURN_ADDR_SET = new Set(BURN_ADDRESSES.map((a) => a.toLowerCase()));
 
-// Lee los swaps REALES de la wallet desde la blockchain (transfers de RCOL).
-// Compra = la wallet recibe RCOL; Venta = la wallet envía RCOL.
-// Esto recupera todo el historial aunque localStorage se haya perdido.
+// Lee transfers REALES de RCOL desde la blockchain (swaps + quemas a dead).
 async function fetchOnchainSwaps(address) {
   const url = `${EXPLORER_API}/addresses/${address}/token-transfers?type=ERC-20&token=${RCOL_ADDRESS}`;
   const res = await fetch(url);
@@ -2247,22 +2263,40 @@ async function fetchOnchainSwaps(address) {
     const from = it.from?.hash?.toLowerCase();
     const to = it.to?.hash?.toLowerCase();
     if (!hash || seen.has(hash)) continue;
+    const dec = Number(it.total?.decimals ?? 18);
+    const amount = it.total?.value != null ? Number(fromBaseUnits(BigInt(it.total.value), dec)) : null;
+    const time = it.timestamp ? Date.parse(it.timestamp) : null;
+
+    if (from === me && to && BURN_ADDR_SET.has(to)) {
+      seen.add(hash);
+      swaps.push({ type: "burn", rcolAmount: amount, hash, time });
+      continue;
+    }
+
     let buy;
     if (to === me) buy = true;
     else if (from === me) buy = false;
     else continue;
     seen.add(hash);
-    const dec = Number(it.total?.decimals ?? 18);
-    const amount = it.total?.value != null ? Number(fromBaseUnits(BigInt(it.total.value), dec)) : null;
-    const time = it.timestamp ? Date.parse(it.timestamp) : null;
-    swaps.push({ buy, rcolAmount: amount, hash, time });
+    swaps.push({ type: "swap", buy, rcolAmount: amount, hash, time });
   }
   return swaps;
 }
 
 // Normaliza una entrada de localStorage (sabe ambos lados del par) a item de UI.
 function localTxToItem(tx) {
+  if (tx.type === "burn") {
+    return {
+      type: "burn",
+      hash: tx.hash,
+      time: tx.time,
+      amount: tx.amount,
+      rcolAmount: tx.amount,
+      rcolOnly: false
+    };
+  }
   return {
+    type: "swap",
     buy: tx.toSym === "RCOL",
     hash: tx.hash,
     time: tx.time,
@@ -2275,35 +2309,62 @@ function localTxToItem(tx) {
 }
 
 function txItemHtml(item) {
-  const buy = item.buy;
+  const isBurn = item.type === "burn";
+  const buy = !isBurn && item.buy;
   const explorerHref = item.hash
     ? `https://worldchain-mainnet.explorer.alchemy.com/tx/${item.hash}`
     : null;
   const timeLabel = item.time ? formatRelativeTime(item.time) : "";
 
   let pairHtml;
-  if (item.rcolOnly) {
-    // Solo conocemos el lado RCOL (swap recuperado on-chain sin datos locales).
+  let badge;
+  let icon;
+  let rowClass;
+
+  if (isBurn) {
+    const amt =
+      item.amount != null
+        ? formatTokenAmount(Number(item.amount))
+        : item.rcolAmount != null
+          ? formatTokenAmount(Number(item.rcolAmount))
+          : "?";
+    pairHtml = `<strong>−${escapeHtml(amt)} RCOL</strong>`;
+    badge = "Quema";
+    icon = "trash-2";
+    rowClass = "tx-item--burn";
+  } else if (item.rcolOnly) {
     const amt = item.rcolAmount != null ? formatTokenAmount(Number(item.rcolAmount)) : "?";
     pairHtml = `<strong>${buy ? "+" : "−"}${escapeHtml(amt)} RCOL</strong>`;
+    badge = buy ? "Compra" : "Venta";
+    icon = buy ? "arrow-down-left" : "arrow-up-right";
+    rowClass = buy ? "tx-item--buy" : "tx-item--sell";
   } else {
     const aIn = item.amountIn != null ? formatTokenAmount(Number(item.amountIn)) : "?";
     const aOut = item.amountOut != null ? formatTokenAmount(Number(item.amountOut)) : "?";
     pairHtml = `<strong>${escapeHtml(aIn)} ${escapeHtml(item.fromSym || "?")}</strong>
       <i data-lucide="arrow-right" class="tx-item__arrow" aria-hidden="true"></i>
       <strong>${escapeHtml(aOut)} ${escapeHtml(item.toSym || "?")}</strong>`;
+    badge = buy ? "Compra" : "Venta";
+    icon = buy ? "arrow-down-left" : "arrow-up-right";
+    rowClass = buy ? "tx-item--buy" : "tx-item--sell";
   }
 
+  const badgeClass = isBurn
+    ? "tx-item__badge--burn"
+    : buy
+      ? "tx-item__badge--buy"
+      : "tx-item__badge--sell";
+
   return `
-    <div class="tx-item${buy ? " tx-item--buy" : " tx-item--sell"}">
+    <div class="tx-item ${rowClass}">
       <span class="tx-item__icon">
-        <i data-lucide="${buy ? "arrow-down-left" : "arrow-up-right"}" aria-hidden="true"></i>
+        <i data-lucide="${icon}" aria-hidden="true"></i>
       </span>
       <span class="tx-item__body">
         <span class="tx-item__pair">${pairHtml}</span>
         <span class="tx-item__meta">
           <span class="tx-item__time">${escapeHtml(timeLabel)}</span>
-          <span class="tx-item__badge${buy ? " tx-item__badge--buy" : " tx-item__badge--sell"}">${buy ? "Compra" : "Venta"}</span>
+          <span class="tx-item__badge ${badgeClass}">${badge}</span>
         </span>
       </span>
       ${explorerHref
@@ -2322,8 +2383,7 @@ function paintTxList(items) {
   const list = document.querySelector("#txHistoryList");
   if (!section || !list) return;
   const sendMode = !document.querySelector("#section-send")?.hidden;
-  const burnMode = !document.querySelector("#section-burn")?.hidden;
-  if (!items.length || sendMode || burnMode) { section.hidden = true; return; }
+  if (!items.length || sendMode) { section.hidden = true; return; }
   section.hidden = false;
   list.innerHTML = items.slice(0, TX_HISTORY_MAX).map(txItemHtml).join("");
   window.lucide?.createIcons?.();
@@ -2340,7 +2400,7 @@ function renderTxHistory() {
   const me = walletState.address;
   fetchOnchainSwaps(me)
     .then((onchain) => {
-      if (!walletState || walletState.address !== me) return; // cambió la wallet
+      if (!walletState || walletState.address !== me) return; // cambio la wallet
       if (!onchain.length) return; // sin datos on-chain: dejamos lo local
 
       const localByHash = {};
@@ -2352,10 +2412,13 @@ function renderTxHistory() {
       const merged = onchain.map((s) => {
         const l = s.hash ? localByHash[s.hash.toLowerCase()] : null;
         if (l) return localTxToItem(l);
-        return { buy: s.buy, hash: s.hash, time: s.time, rcolAmount: s.rcolAmount, rcolOnly: true };
+        if (s.type === "burn") {
+          return { type: "burn", hash: s.hash, time: s.time, rcolAmount: s.rcolAmount, rcolOnly: true };
+        }
+        return { type: "swap", buy: s.buy, hash: s.hash, time: s.time, rcolAmount: s.rcolAmount, rcolOnly: true };
       });
 
-      // Sumar swaps locales recién hechos que el indexador aún no tiene.
+      // Sumar entradas locales recien hechas que el indexador aun no tiene.
       const onchainHashes = new Set(onchain.map((s) => s.hash?.toLowerCase()).filter(Boolean));
       local.forEach((tx) => {
         if (!tx.hash || !onchainHashes.has(tx.hash.toLowerCase())) merged.push(localTxToItem(tx));

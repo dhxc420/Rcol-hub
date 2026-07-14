@@ -2873,6 +2873,11 @@ html[data-theme="light"] .wallet-token__init {
   color: #ff1476;
 }
 
+.tx-item--burn .tx-item__icon {
+  background: color-mix(in srgb, #ff4d6d 18%, transparent);
+  color: #ff6b84;
+}
+
 .tx-item__icon svg {
   width: 18px;
   height: 18px;
@@ -2938,6 +2943,11 @@ svg.tx-item__arrow {
 .tx-item__badge--sell {
   background: rgba(255, 20, 118, 0.13);
   color: #ff1476;
+}
+
+.tx-item__badge--burn {
+  background: color-mix(in srgb, #ff4d6d 18%, transparent);
+  color: #ff6b84;
 }
 
 .tx-item__link {

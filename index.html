@@ -270,29 +270,51 @@
           </div>
 
           <div class="wallet-card__total" id="walletTotal" hidden>
-            <span class="stat-label">Valor total</span>
+            <span class="stat-label">Saldo total</span>
             <strong id="walletTotalValue">$0.00</strong>
-            <span class="wallet-card__hint" id="walletTotalHint">Saldos en Worldchain</span>
+            <span class="wallet-card__hint" id="walletTotalHint">Manage assets · swap tokens</span>
           </div>
 
           <div class="wallet-card__empty" id="walletEmpty">
             <i data-lucide="wallet" aria-hidden="true"></i>
-            <p>Conecta tu wallet de World App para ver tus saldos, tu portafolio y operar RCOL.</p>
+            <p>Conecta World App para gestionar assets, hacer swap y recibir RCOL.</p>
           </div>
 
           <div class="wallet-tokens" id="swapBalances" hidden></div>
         </div>
 
-        <div class="wallet-mode" role="tablist" aria-label="Acciones de wallet">
-          <button class="wallet-mode__btn is-active" id="modeSwapBtn" type="button" role="tab" aria-selected="true" data-mode="swap">
-            <i data-lucide="arrow-left-right" aria-hidden="true"></i>
-            <span>Swap</span>
+        <nav class="wallet-actions" aria-label="Acciones rápidas">
+          <button class="wallet-action" id="qaReceive" type="button" data-action="receive">
+            <span class="wallet-action__icon" aria-hidden="true">
+              <i data-lucide="arrow-down"></i>
+            </span>
+            <span class="wallet-action__label">Recibir</span>
           </button>
-          <button class="wallet-mode__btn" id="modeSendBtn" type="button" role="tab" aria-selected="false" data-mode="send">
-            <i data-lucide="send" aria-hidden="true"></i>
-            <span>Enviar</span>
+          <button class="wallet-action" id="qaSend" type="button" data-action="send">
+            <span class="wallet-action__icon" aria-hidden="true">
+              <i data-lucide="arrow-up"></i>
+            </span>
+            <span class="wallet-action__label">Enviar</span>
           </button>
-        </div>
+          <button class="wallet-action is-active" id="qaSwap" type="button" data-action="swap">
+            <span class="wallet-action__icon" aria-hidden="true">
+              <i data-lucide="refresh-cw"></i>
+            </span>
+            <span class="wallet-action__label">Intercambiar</span>
+          </button>
+          <a
+            class="wallet-action"
+            id="qaEarn"
+            href="https://world.org/es-es/ecosystem/app_71ab236862b2a6b92bb663a6ceeda3f2"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span class="wallet-action__icon" aria-hidden="true">
+              <i data-lucide="sprout"></i>
+            </span>
+            <span class="wallet-action__label">Ganar</span>
+          </a>
+        </nav>
 
         <button class="burn-mode-btn" id="modeBurnBtn" type="button">
           <i data-lucide="trash-2" aria-hidden="true"></i>

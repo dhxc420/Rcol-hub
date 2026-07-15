@@ -1359,45 +1359,71 @@ html[data-theme="light"] .swap-fee {
   cursor: not-allowed;
 }
 
-.wallet-mode {
+.wallet-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 4px;
-  border: 1px solid var(--line-soft);
-  border-radius: 16px;
-  background: var(--chip);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 4px 2px 2px;
 }
 
-.wallet-mode__btn {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.wallet-action {
+  display: grid;
+  justify-items: center;
   gap: 8px;
+  margin: 0;
+  padding: 0;
   border: 0;
-  border-radius: 12px;
   background: transparent;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.wallet-mode__btn svg {
-  width: 16px;
-  height: 16px;
+.wallet-action__icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--gold-bright, #f8d66d) 16%, transparent), transparent 55%),
+    color-mix(in srgb, var(--panel, #14110c) 92%, #000);
+  color: var(--ink);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
-.wallet-mode__btn.is-active {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--gold-bright) 88%, #fff), var(--gold));
+.wallet-action__icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.1;
+}
+
+.wallet-action__label {
+  font-size: 0.74rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.15;
+}
+
+.wallet-action.is-active .wallet-action__icon {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold-bright) 92%, #fff), var(--gold));
   color: #171005;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--gold) 28%, transparent);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--gold) 28%, transparent);
 }
 
-.wallet-mode__btn:active {
-  transform: scale(0.98);
+.wallet-action.is-active .wallet-action__label {
+  color: var(--ink);
+}
+
+.wallet-action:active .wallet-action__icon {
+  transform: scale(0.94);
 }
 
 .burn-mode-btn {
@@ -2644,15 +2670,34 @@ svg {
   display: grid;
   gap: 14px;
   padding: 18px;
-  border: 1px solid color-mix(in srgb, #ff1476 30%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
   border-radius: 24px;
   background:
-    radial-gradient(circle at 12% 0%, rgba(255, 20, 118, 0.16), transparent 60%),
-    radial-gradient(circle at 90% 8%, rgba(179, 0, 255, 0.13), transparent 55%),
-    var(--panel);
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 42%),
+    radial-gradient(circle at 12% 0%, rgba(255, 20, 118, 0.12), transparent 58%),
+    linear-gradient(165deg, color-mix(in srgb, var(--panel) 88%, #0a0a0a), var(--panel));
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
+  position: relative;
+}
+
+.wallet-card::after {
+  content: "";
+  position: absolute;
+  right: -18%;
+  top: -40%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--gold) 18%, transparent);
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.wallet-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .wallet-card__top {
@@ -2795,10 +2840,16 @@ svg {
   display: none;
 }
 
+.wallet-card__total .stat-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .wallet-card__total strong {
-  font-size: 2rem;
+  font-size: 2.15rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
@@ -2807,6 +2858,19 @@ svg {
 .wallet-card__hint {
   color: var(--muted);
   font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 360px) {
+  .wallet-action__icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .wallet-action__label {
+    font-size: 0.68rem;
+  }
 }
 
 .wallet-card__empty {

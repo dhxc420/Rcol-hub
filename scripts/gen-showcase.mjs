@@ -69,8 +69,8 @@ async function main() {
   await wait(2500);
   await unlock(page);
   await wait(1000);
-  if (await page.locator("#modeSendBtn").count()) {
-    await page.locator("#modeSendBtn").click();
+  if (await page.locator("#qaSend").count()) {
+    await page.locator("#qaSend").click();
     await wait(700);
   }
   const swapTmp = path.join(tmpDir, "swap-el.png");

@@ -11,6 +11,8 @@ const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
 const STAKING_APP_URL =
   "https://world.org/mini-app?app_id=app_71ab236862b2a6b92bb663a6ceeda3f2&path=&draft_id=meta_8e90416ea4ab360f84c860bb90fac074";
+const EARN_APP_URL =
+  "https://world.org/es-es/ecosystem/app_71ab236862b2a6b92bb663a6ceeda3f2";
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -1835,6 +1837,34 @@ function setupSwap() {
   scheduleQuote();
 }
 
+function syncWalletQuickActions(mode) {
+  const isSend = mode === "send";
+  const isBurn = mode === "burn";
+  const isSwap = !isSend && !isBurn;
+  const receiveActive = isSend && payPane === "receive";
+  const sendActive = isSend && payPane !== "receive";
+
+  document.querySelector("#qaSwap")?.classList.toggle("is-active", isSwap);
+  document.querySelector("#qaSend")?.classList.toggle("is-active", sendActive);
+  document.querySelector("#qaReceive")?.classList.toggle("is-active", receiveActive);
+  document.querySelector("#modeBurnBtn")?.classList.toggle("is-active", isBurn);
+}
+
+function openReceiveRcol() {
+  setWalletMode("send");
+  setPayPane("receive");
+  if (!walletState) {
+    connectWallet().then((ok) => {
+      if (ok) refreshReceiveQr();
+    });
+  }
+}
+
+function openSendRcol() {
+  setWalletMode("send");
+  setPayPane("send");
+}
+
 function setWalletMode(mode) {
   try {
     const isSend = mode === "send";
@@ -1845,9 +1875,6 @@ function setWalletMode(mode) {
     const burnPanel = document.querySelector("#section-burn");
     const rateRow = document.querySelector("#swapRate");
     const title = document.querySelector(".swap-view .view-topbar strong");
-    const swapBtn = document.querySelector("#modeSwapBtn");
-    const sendBtn = document.querySelector("#modeSendBtn");
-    const burnBtn = document.querySelector("#modeBurnBtn");
 
     if (swapPanel) swapPanel.hidden = !isSwap;
     if (sendPanel) sendPanel.hidden = !isSend;
@@ -1856,17 +1883,13 @@ function setWalletMode(mode) {
     renderTxHistory();
 
     if (title) {
-      title.textContent = isBurn ? "Quemar RCOL" : isSend ? "Enviar" : "Swap RCOL";
+      title.textContent = isBurn
+        ? "Quemar RCOL"
+        : isSend
+          ? (payPane === "receive" ? "Recibir RCOL" : "Enviar")
+          : "Swap RCOL";
     }
-    if (swapBtn) {
-      swapBtn.classList.toggle("is-active", isSwap);
-      swapBtn.setAttribute("aria-selected", String(isSwap));
-    }
-    if (sendBtn) {
-      sendBtn.classList.toggle("is-active", isSend);
-      sendBtn.setAttribute("aria-selected", String(isSend));
-    }
-    if (burnBtn) burnBtn.classList.toggle("is-active", isBurn);
+    syncWalletQuickActions(mode);
 
     if (isSend) {
       updateSendBalance();
@@ -1881,8 +1904,13 @@ function setWalletMode(mode) {
 }
 
 function setupWalletMode() {
-  document.querySelector("#modeSwapBtn")?.addEventListener("click", () => setWalletMode("swap"));
-  document.querySelector("#modeSendBtn")?.addEventListener("click", () => setWalletMode("send"));
+  document.querySelector("#qaSwap")?.addEventListener("click", () => setWalletMode("swap"));
+  document.querySelector("#qaSend")?.addEventListener("click", () => openSendRcol());
+  document.querySelector("#qaReceive")?.addEventListener("click", () => openReceiveRcol());
+  document.querySelector("#qaEarn")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    window.open(EARN_APP_URL, "_blank", "noreferrer");
+  });
   document.querySelector("#modeBurnBtn")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1937,6 +1965,9 @@ function setPayPane(mode) {
   const sendBtn = document.querySelector("#payActSend");
   const receiveBtn = document.querySelector("#payActReceive");
   const contactsBtn = document.querySelector("#payActContacts");
+  const title = document.querySelector(".swap-view .view-topbar strong");
+  const sendPanel = document.querySelector("#section-send");
+  const inSendMode = sendPanel && !sendPanel.hidden;
 
   if (sendPane) sendPane.hidden = payPane !== "send";
   if (receivePane) receivePane.hidden = payPane !== "receive";
@@ -1952,6 +1983,10 @@ function setPayPane(mode) {
     contactsBtn.classList.toggle("is-active", false);
     contactsBtn.setAttribute("aria-selected", "false");
   }
+  if (inSendMode && title) {
+    title.textContent = payPane === "receive" ? "Recibir RCOL" : "Enviar";
+  }
+  if (inSendMode) syncWalletQuickActions("send");
   if (payPane === "receive") refreshReceiveQr();
   window.lucide?.createIcons?.();
 }

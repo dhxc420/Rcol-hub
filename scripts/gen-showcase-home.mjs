@@ -25,12 +25,14 @@ async function toSquare1080(src, outNames) {
       <rect x="16" y="16" width="1048" height="1048" rx="44" fill="none" stroke="rgba(180,140,40,0.4)" stroke-width="4"/>
     </svg>`
   );
+
+  // Fit the full phone home UI into a square (letterbox), so World portal gets 1080:1080
+  // without slicing the hero/CTAs.
   const buf = await sharp(src)
     .rotate()
     .resize(1080, 1080, {
-      fit: "cover",
-      position: "top",
-      background: { r: 12, g: 10, b: 8 }
+      fit: "contain",
+      background: { r: 8, g: 7, b: 4 }
     })
     .composite([{ input: frame, top: 0, left: 0 }])
     .jpeg({ quality: 92 })

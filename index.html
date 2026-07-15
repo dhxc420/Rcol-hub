@@ -20,6 +20,7 @@
     </script>
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://unpkg.com/lucide@1.18.0" defer></script>
+    <script src="./vendor/qrcode-generator.js"></script>
     <script type="module" src="./app.js"></script>
   </head>
   <body>
@@ -401,7 +402,7 @@
               </div>
             </div>
             <div class="receive-qr" id="receiveQrWrap">
-              <img id="receiveQrImg" alt="Codigo QR para cobrar" width="220" height="220" hidden />
+              <canvas id="receiveQrCanvas" width="200" height="200" aria-label="Codigo QR para cobrar" hidden></canvas>
               <p class="receive-qr__empty" id="receiveQrEmpty">Conecta tu wallet para generar el QR</p>
             </div>
             <p class="receive-addr" id="receiveAddrText">—</p>

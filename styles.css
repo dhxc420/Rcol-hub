@@ -1266,19 +1266,48 @@ html[data-theme="light"] .swap-fee {
   display: none;
 }
 
+.receive-box .token-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--gold-bright, #f8d66d) 10%, transparent);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.receive-box .token-pill img {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .receive-qr {
   display: grid;
   place-items: center;
+  width: min(100%, 260px);
   min-height: 240px;
+  margin: 0 auto;
   padding: 16px;
   border-radius: 18px;
   border: 1px solid var(--line-soft);
   background: #fff;
+  overflow: hidden;
 }
 
-.receive-qr img {
-  width: 220px;
-  height: 220px;
+.receive-qr img,
+.receive-qr canvas {
+  width: 200px;
+  height: 200px;
+  max-width: 100%;
   object-fit: contain;
 }
 

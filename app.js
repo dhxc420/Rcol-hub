@@ -1973,22 +1973,41 @@ function buildReceivePayload() {
   };
 }
 
-async function renderQrDataUrl(value) {
-  try {
-    const mod = await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm");
-    const QRCode = mod.default || mod;
-    return await QRCode.toDataURL(value, {
-      width: 220,
-      margin: 2,
-      color: { dark: "#0b1220", light: "#ffffff" }
-    });
-  } catch {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(value)}`;
+function drawReceiveQr(canvas, value) {
+  const makeQr = typeof window !== "undefined" ? window.qrcode : null;
+  if (typeof makeQr !== "function") {
+    throw new Error("QR library not loaded");
+  }
+
+  const qr = makeQr(0, "M");
+  qr.addData(String(value));
+  qr.make();
+
+  const modules = qr.getModuleCount();
+  const target = 200;
+  const cell = Math.max(2, Math.floor(target / (modules + 4)));
+  const margin = cell * 2;
+  const size = modules * cell + margin * 2;
+
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#0b1220";
+  for (let row = 0; row < modules; row += 1) {
+    for (let col = 0; col < modules; col += 1) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(margin + col * cell, margin + row * cell, cell, cell);
+      }
+    }
   }
 }
 
-async function refreshReceiveQr() {
-  const img = document.querySelector("#receiveQrImg");
+function refreshReceiveQr() {
+  const canvas = document.querySelector("#receiveQrCanvas");
   const empty = document.querySelector("#receiveQrEmpty");
   const addrText = document.querySelector("#receiveAddrText");
   const copyBtn = document.querySelector("#receiveCopyBtn");
@@ -1996,10 +2015,7 @@ async function refreshReceiveQr() {
   const payload = buildReceivePayload();
 
   if (!payload) {
-    if (img) {
-      img.hidden = true;
-      img.removeAttribute("src");
-    }
+    if (canvas) canvas.hidden = true;
     if (empty) {
       empty.hidden = false;
       empty.textContent = "Conecta tu wallet para generar el QR";
@@ -2010,7 +2026,6 @@ async function refreshReceiveQr() {
     return;
   }
 
-  if (empty) empty.hidden = true;
   if (addrText) {
     const amount = String(document.querySelector("#receiveAmount")?.value || "").trim();
     addrText.textContent = amount && Number(amount) > 0
@@ -2020,9 +2035,18 @@ async function refreshReceiveQr() {
   if (copyBtn) copyBtn.disabled = false;
   if (shareBtn) shareBtn.disabled = false;
 
-  if (img) {
-    img.hidden = false;
-    img.src = await renderQrDataUrl(payload.qrValue);
+  try {
+    if (canvas) {
+      drawReceiveQr(canvas, payload.qrValue);
+      canvas.hidden = false;
+    }
+    if (empty) empty.hidden = true;
+  } catch {
+    if (canvas) canvas.hidden = true;
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = "No se pudo generar el QR. Usa Copiar o Compartir.";
+    }
   }
 }
 

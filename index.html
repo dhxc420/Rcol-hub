@@ -284,23 +284,23 @@
         </div>
 
         <nav class="wallet-actions" aria-label="Acciones rápidas">
-          <button class="wallet-action" id="qaReceive" type="button" data-action="receive">
+          <button class="wallet-action is-active" id="qaSwap" type="button" data-action="swap">
             <span class="wallet-action__icon" aria-hidden="true">
-              <i data-lucide="arrow-down"></i>
+              <i data-lucide="arrow-left-right"></i>
             </span>
-            <span class="wallet-action__label">Recibir</span>
+            <span class="wallet-action__label">Intercambiar</span>
           </button>
           <button class="wallet-action" id="qaSend" type="button" data-action="send">
             <span class="wallet-action__icon" aria-hidden="true">
-              <i data-lucide="arrow-up"></i>
+              <i data-lucide="send"></i>
             </span>
             <span class="wallet-action__label">Enviar</span>
           </button>
-          <button class="wallet-action is-active" id="qaSwap" type="button" data-action="swap">
+          <button class="wallet-action" id="qaReceive" type="button" data-action="receive">
             <span class="wallet-action__icon" aria-hidden="true">
-              <i data-lucide="refresh-cw"></i>
+              <i data-lucide="qr-code"></i>
             </span>
-            <span class="wallet-action__label">Intercambiar</span>
+            <span class="wallet-action__label">Recibir</span>
           </button>
           <a
             class="wallet-action"
@@ -310,7 +310,7 @@
             rel="noreferrer"
           >
             <span class="wallet-action__icon" aria-hidden="true">
-              <i data-lucide="sprout"></i>
+              <i data-lucide="trending-up"></i>
             </span>
             <span class="wallet-action__label">Ganar</span>
           </a>

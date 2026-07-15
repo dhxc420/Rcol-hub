@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const outDir = path.join(root, "assets");
 const tmpDir = path.join(root, ".tmp-shots");
-const BASE = "https://rcol-hub.vercel.app/";
+const BASE = process.env.SHOWCASE_BASE || "http://127.0.0.1:4173/";
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function unlock(page) {
@@ -18,7 +18,7 @@ async function unlock(page) {
   });
 }
 
-async function squareFromFile(src, outName, aliasName) {
+async function squareFromFile(src, outNames) {
   const frame = Buffer.from(
     `<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
       <rect x="16" y="16" width="1048" height="1048" rx="44" fill="none" stroke="rgba(180,140,40,0.4)" stroke-width="4"/>
@@ -32,9 +32,10 @@ async function squareFromFile(src, outName, aliasName) {
     .composite([{ input: frame, top: 0, left: 0 }])
     .jpeg({ quality: 92 })
     .toBuffer();
-  await writeFile(path.join(outDir, outName), buf);
-  if (aliasName) await writeFile(path.join(outDir, aliasName), buf);
-  console.log("✓", outName);
+  for (const name of outNames) {
+    await writeFile(path.join(outDir, name), buf);
+    console.log("✓", name);
+  }
 }
 
 async function main() {
@@ -53,44 +54,34 @@ async function main() {
     } catch {}
   });
 
-  // 1 Mercado
-  await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 90000 });
-  await wait(3500);
-  await unlock(page);
-  await wait(1200);
-  await page.locator("#section-market").scrollIntoViewIfNeeded();
-  await wait(800);
-  const marketTmp = path.join(tmpDir, "market-el.png");
-  await page.locator("#section-market").screenshot({ path: marketTmp });
-  await squareFromFile(marketTmp, "showcase-1-home.jpg", "app-1-home-square.jpg");
-
-  // 2 Swap (wallet + acciones Intercambiar / Enviar / Recibir / Ganar)
-  await page.goto(`${BASE}#swap`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.goto(`${BASE}#swap`, { waitUntil: "domcontentloaded", timeout: 90000 });
   await wait(2500);
   await unlock(page);
   await wait(1000);
   if (await page.locator("#qaSwap").count()) {
     await page.locator("#qaSwap").click();
-    await wait(500);
+    await wait(400);
   }
   await page.locator("#swapWalletCard").scrollIntoViewIfNeeded();
-  await wait(400);
+  await wait(500);
+
   const swapTmp = path.join(tmpDir, "swap-el.png");
   await page.locator("#swapView").screenshot({ path: swapTmp });
-  await squareFromFile(swapTmp, "showcase-2-swap.jpg", "app-2-swap-square.jpg");
+  await squareFromFile(swapTmp, ["showcase-2-swap.jpg", "app-2-swap-square.jpg"]);
 
-  // 3 Comunidad
-  await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await wait(2500);
-  await unlock(page);
-  await page.locator("#section-community").scrollIntoViewIfNeeded();
-  await wait(800);
-  const communityTmp = path.join(tmpDir, "community-el.png");
-  await page.locator("#section-community").screenshot({ path: communityTmp });
-  await squareFromFile(communityTmp, "showcase-3-community.jpg", "app-5-community-square.jpg");
+  // Alias rectangular also used in World assets
+  const wide = await sharp(swapTmp)
+    .resize(1170, 2532, {
+      fit: "contain",
+      background: { r: 245, g: 239, b: 227 }
+    })
+    .png()
+    .toBuffer();
+  await writeFile(path.join(outDir, "app-2-swap.png"), wide);
+  console.log("✓ app-2-swap.png");
 
   await browser.close();
-  console.log("Showcase images ready");
+  console.log("Swap showcase ready");
 }
 
 main().catch((e) => {

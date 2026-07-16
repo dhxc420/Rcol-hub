@@ -11,8 +11,6 @@ const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
 const STAKING_APP_URL =
   "https://world.org/mini-app?app_id=app_71ab236862b2a6b92bb663a6ceeda3f2&path=&draft_id=meta_8e90416ea4ab360f84c860bb90fac074";
-const EARN_APP_URL =
-  "https://world.org/es-es/ecosystem/app_71ab236862b2a6b92bb663a6ceeda3f2";
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -686,10 +684,14 @@ function applyConfig(config) {
 
   const puf = config.links.find((link) => link.id === "puf");
   const pufCta = document.querySelector("#pufCta");
-  if (puf && pufCta && !isPlaceholder(puf.url)) {
-    pufCta.href = puf.url;
-    const label = pufCta.querySelector("span");
-    if (label) label.textContent = puf.title || "Staking RCOL";
+  const qaEarn = document.querySelector("#qaEarn");
+  if (puf && !isPlaceholder(puf.url)) {
+    if (pufCta) {
+      pufCta.href = puf.url;
+      const label = pufCta.querySelector("span");
+      if (label) label.textContent = puf.title || "Staking RCOL";
+    }
+    if (qaEarn) qaEarn.href = puf.url;
   }
 
   renderAnnouncements(config.announcements || []);
@@ -1909,7 +1911,7 @@ function setupWalletMode() {
   document.querySelector("#qaReceive")?.addEventListener("click", () => openReceiveRcol());
   document.querySelector("#qaEarn")?.addEventListener("click", (event) => {
     event.preventDefault();
-    window.open(EARN_APP_URL, "_blank", "noreferrer");
+    window.open(STAKING_APP_URL, "_blank", "noreferrer");
   });
   document.querySelector("#modeBurnBtn")?.addEventListener("click", (event) => {
     event.preventDefault();

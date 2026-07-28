@@ -9,8 +9,9 @@ const RCOL_DECIMALS = 18;
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
 const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2/tokens/";
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
-const STAKING_APP_URL =
-  "https://world.org/mini-app?app_id=app_71ab236862b2a6b92bb663a6ceeda3f2&path=&draft_id=meta_8e90416ea4ab360f84c860bb90fac074";
+const LANDING_URL = "https://dhxc420.github.io/Rcol.fun/";
+const LANDING_STAKE_URL = `${LANDING_URL}#staking`;
+const LANDING_GAMES_URL = `${LANDING_URL}#juegos`;
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -77,7 +78,7 @@ const fallbackConfig = {
         {
           title: "Vuela RCOL",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3",
+          url: LANDING_GAMES_URL,
           icon: "./assets/vuela-rcol.png",
           isImage: true,
           status: "reviewing"
@@ -85,14 +86,14 @@ const fallbackConfig = {
         {
           title: "Flappy Butterfly",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32",
+          url: LANDING_GAMES_URL,
           icon: "bird",
           status: "reviewing"
         },
         {
           title: "World Runner Arcade Game",
           description: "En World App",
-          url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5",
+          url: LANDING_GAMES_URL,
           icon: "footprints",
           status: "reviewing"
         }
@@ -102,7 +103,7 @@ const fallbackConfig = {
       id: "puf",
       title: "Staking RCOL",
       description: "Haz staking de RCOL",
-      url: STAKING_APP_URL,
+      url: LANDING_STAKE_URL,
       icon: "landmark",
       accent: "#facc15"
     },
@@ -145,7 +146,7 @@ const fallbackConfig = {
       icon: "./assets/vuela-rcol-icon.png",
       accent: "#facc15",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3"
+      url: LANDING_GAMES_URL
     },
     {
       title: "World Runner Arcade Game",
@@ -153,7 +154,7 @@ const fallbackConfig = {
       icon: "footprints",
       accent: "#a855f7",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_bb51c58c8fd37c9439bff25d16b1bbc5"
+      url: LANDING_GAMES_URL
     },
     {
       title: "Flappy Butterfly",
@@ -161,7 +162,7 @@ const fallbackConfig = {
       icon: "bird",
       accent: "#18e0a0",
       image: "",
-      url: "https://world.org/mini-app?app_id=app_49dc4d4a33e979e43f1dd2f4bbd7ba32"
+      url: LANDING_GAMES_URL
     },
     {
       title: "Siguenos en X",
@@ -1530,7 +1531,7 @@ let quoteTimer = null;
 let quoteSeq = 0;
 
 function openStakingApp() {
-  window.open(STAKING_APP_URL, "_blank", "noreferrer");
+  window.open(LANDING_STAKE_URL, "_blank", "noreferrer");
 }
 
 function isValidAddress(value) {
@@ -1911,7 +1912,7 @@ function setupWalletMode() {
   document.querySelector("#qaReceive")?.addEventListener("click", () => openReceiveRcol());
   document.querySelector("#qaEarn")?.addEventListener("click", (event) => {
     event.preventDefault();
-    window.open(STAKING_APP_URL, "_blank", "noreferrer");
+    window.open(LANDING_STAKE_URL, "_blank", "noreferrer");
   });
   document.querySelector("#modeBurnBtn")?.addEventListener("click", (event) => {
     event.preventDefault();

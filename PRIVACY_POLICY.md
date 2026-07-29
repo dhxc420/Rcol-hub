@@ -65,7 +65,7 @@ Publicaremos cambios en esta misma URL.
 
 - Telegram: https://t.me/updatesDzc
 - X: https://x.com/Rcol_Oficial
-- Web: https://dhxc420.github.io/Rcol.fun/
+- Web: https://rcol-fun.vercel.app/
 
 ---
 

@@ -11,7 +11,7 @@
       "id": "website",
       "title": "Sitio web RCOL",
       "description": "rcol.fun",
-      "url": "https://dhxc420.github.io/Rcol.fun/",
+      "url": "https://rcol-fun.vercel.app/",
       "icon": "globe-2",
       "accent": "#f8d66d"
     },
@@ -33,7 +33,7 @@
         {
           "title": "Vuela RCOL",
           "description": "En World App",
-          "url": "https://dhxc420.github.io/Rcol.fun/#juegos",
+          "url": "https://rcol-fun.vercel.app/#juegos",
           "icon": "./assets/vuela-rcol.png",
           "isImage": true,
           "status": "reviewing"
@@ -41,14 +41,14 @@
         {
           "title": "Flappy Butterfly",
           "description": "En World App",
-          "url": "https://dhxc420.github.io/Rcol.fun/#juegos",
+          "url": "https://rcol-fun.vercel.app/#juegos",
           "icon": "bird",
           "status": "reviewing"
         },
         {
           "title": "World Runner Arcade Game",
           "description": "En World App",
-          "url": "https://dhxc420.github.io/Rcol.fun/#juegos",
+          "url": "https://rcol-fun.vercel.app/#juegos",
           "icon": "footprints",
           "status": "reviewing"
         }
@@ -58,7 +58,7 @@
       "id": "puf",
       "title": "Staking RCOL",
       "description": "Haz staking de RCOL",
-      "url": "https://dhxc420.github.io/Rcol.fun/#staking",
+      "url": "https://rcol-fun.vercel.app/#staking",
       "icon": "landmark",
       "accent": "#facc15"
     },
@@ -101,7 +101,7 @@
       "icon": "./assets/vuela-rcol-icon.png",
       "accent": "#facc15",
       "image": "",
-      "url": "https://dhxc420.github.io/Rcol.fun/#juegos"
+      "url": "https://rcol-fun.vercel.app/#juegos"
     },
     {
       "title": "World Runner Arcade Game",
@@ -109,7 +109,7 @@
       "icon": "footprints",
       "accent": "#a855f7",
       "image": "",
-      "url": "https://dhxc420.github.io/Rcol.fun/#juegos"
+      "url": "https://rcol-fun.vercel.app/#juegos"
     },
     {
       "title": "Flappy Butterfly",
@@ -117,7 +117,7 @@
       "icon": "bird",
       "accent": "#18e0a0",
       "image": "",
-      "url": "https://dhxc420.github.io/Rcol.fun/#juegos"
+      "url": "https://rcol-fun.vercel.app/#juegos"
     },
     {
       "title": "Siguenos en X",

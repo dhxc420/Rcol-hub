@@ -67,7 +67,7 @@ rcol-mini-app/
 | Recurso | URL | Status |
 |---------|-----|--------|
 | **App Production** | https://rcol-hub.vercel.app/ | ✅ Live |
-| **Sitio Web** | https://dhxc420.github.io/Rcol.fun/ | ✅ |
+| **Sitio Web** | https://rcol-fun.vercel.app/ | ✅ |
 | **PUF** | world.org/mini-app (token RCOL) | ✅ |
 | **Vuela RCOL** | world.org/mini-app (game) | ✅ |
 | **DEX** | dexscreener.com/worldchain | ✅ |
@@ -185,7 +185,7 @@ Documentation:     A+ (4 docs profesionales)
 **RCOLombia DAO:**
 - Twitter: @Rcol_Oficial
 - Telegram: t.me/updatesDzc
-- Web: https://dhxc420.github.io/Rcol.fun/
+- Web: https://rcol-fun.vercel.app/
 
 ---
 

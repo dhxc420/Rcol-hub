@@ -63,7 +63,7 @@
 - [x] PUF: https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4
 - [x] Vuela RCOL: https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3
 - [x] DEX: https://dexscreener.com/worldchain/0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a
-- [x] Sitio Web: https://dhxc420.github.io/Rcol.fun/
+- [x] Sitio Web: https://rcol-fun.vercel.app/
 - [x] X/Twitter: https://x.com/Rcol_Oficial
 - [x] Telegram: https://t.me/updatesDzc
 - [x] Todos retornan 200 OK

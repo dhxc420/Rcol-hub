@@ -9,7 +9,7 @@ const RCOL_DECIMALS = 18;
 const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
 const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2/tokens/";
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
-const LANDING_URL = "https://dhxc420.github.io/Rcol.fun/";
+const LANDING_URL = "https://rcol-fun.vercel.app/";
 const LANDING_STAKE_URL = `${LANDING_URL}#staking`;
 const LANDING_GAMES_URL = `${LANDING_URL}#juegos`;
 const BURN_ADDRESSES = [
@@ -56,7 +56,7 @@ const fallbackConfig = {
       id: "website",
       title: "Sitio web RCOL",
       description: "rcol.fun",
-      url: "https://dhxc420.github.io/Rcol.fun/",
+      url: "https://rcol-fun.vercel.app/",
       icon: "globe-2",
       accent: "#f8d66d"
     },

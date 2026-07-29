@@ -50,7 +50,7 @@ RCOL Hub es el portal oficial de **RCOLombia DAO** - un proyecto de moneda digit
 
 | Elemento | URL | Estado |
 |----------|-----|--------|
-| Sitio Web | https://dhxc420.github.io/Rcol.fun/ | ✅ Activo |
+| Sitio Web | https://rcol-fun.vercel.app/ | ✅ Activo |
 | Token PUF | https://world.org/mini-app?app_id=app_e5ba7c3061400e361f98ce44d8b1b9c4&path=/token/0x82bf7aa0680d9c2d6ffa77b995e2092fe68d308a | ✅ Activo |
 | Vuela RCOL | https://world.org/mini-app?app_id=app_a5901e6e8ce50db069d46bfb3c9b0fa3 | ✅ Activo |
 | DEX | https://dexscreener.com/worldchain/0x82bF7aA0680D9C2D6fFa77b995e2092fE68d308a | ✅ Activo |
@@ -120,7 +120,7 @@ RCOL Hub es el portal oficial de **RCOLombia DAO** - un proyecto de moneda digit
 ## 📞 Contacto y Soporte
 
 **RCOLombia DAO**
-- 🔗 Sitio Web: https://dhxc420.github.io/Rcol.fun/
+- 🔗 Sitio Web: https://rcol-fun.vercel.app/
 - 🐦 Twitter: @Rcol_Oficial
 - 💬 Telegram: t.me/updatesDzc
 

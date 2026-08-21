@@ -1273,6 +1273,8 @@ async function getTokenBalanceRaw(tokenAddress, owner) {
 }
 
 let walletBalanceStr = "0"; // saldo exacto del token "Pagas" (para MAX)
+let walletBalanceWei = 0n;
+let swapExactInWei = null; // wei exacto cuando el usuario toca MAX
 
 async function updateSwapBalance() {
   const maxButton = document.querySelector("#swapMax");
@@ -1288,6 +1290,7 @@ async function updateSwapBalance() {
   maxButton.hidden = false;
   try {
     const raw = await getTokenBalanceRaw(token.address, walletState.address);
+    walletBalanceWei = raw;
     walletBalanceStr = fromBaseUnits(raw, token.decimals);
     valEl.textContent = `${formatTokenAmount(Number(walletBalanceStr))} ${fromSym}`;
   } catch {
@@ -1299,10 +1302,16 @@ function setupWallet() {
   document.querySelector("#walletButton")?.addEventListener("click", connectWallet);
   document.querySelector("#swapConnectBtn")?.addEventListener("click", connectWallet);
   document.querySelector("#swapMax")?.addEventListener("click", () => {
-    if (!walletState || !(Number(walletBalanceStr) > 0)) return;
+    if (!walletState || walletBalanceWei <= 0n) return;
+    const fromSym = document.querySelector("#swapFrom")?.value;
+    const token = tokenBySymbol[fromSym];
+    if (!token) return;
     const input = document.querySelector("#swapAmount");
-    input.value = walletBalanceStr;
-    input.dispatchEvent(new Event("input"));
+    const display = floorToDisplayAmount(walletBalanceWei, token.decimals);
+    swapExactInWei = toBaseUnits(display, token.decimals);
+    input.value = display;
+    setSwapError("");
+    scheduleQuote();
   });
   document.querySelector("#walletRefresh")?.addEventListener("click", () => {
     if (!walletState) return;
@@ -1679,6 +1688,19 @@ function fromBaseUnits(value, decimals) {
   return fracPart ? `${intPart}.${fracPart}` : intPart;
 }
 
+// type=number pierde decimales de tokens 18dp (MAX de 2M RCOL redondeaba de mas).
+function floorToDisplayAmount(amountWei, decimals, displayDecimals = 8) {
+  if (decimals <= displayDecimals) return fromBaseUnits(amountWei, decimals);
+  const factor = 10n ** BigInt(decimals - displayDecimals);
+  return fromBaseUnits((amountWei / factor) * factor, decimals);
+}
+
+async function capAmountToBalance(tokenAddress, amountWei) {
+  if (!walletState?.address || amountWei <= 0n) return amountWei;
+  const bal = await getTokenBalanceRaw(tokenAddress, walletState.address);
+  return amountWei > bal ? bal : amountWei;
+}
+
 function pad32(hexNoPrefix) {
   return hexNoPrefix.toLowerCase().padStart(64, "0");
 }
@@ -1833,6 +1855,7 @@ function setupSwap() {
 
   fromSelect.addEventListener("change", () => {
     enforcePair(fromSelect);
+    swapExactInWei = null;
     setSwapError("");
     scheduleQuote();
     updateSwapBalance();
@@ -1843,6 +1866,7 @@ function setupSwap() {
     scheduleQuote();
   });
   amountInput.addEventListener("input", () => {
+    swapExactInWei = null;
     setSwapError("");
     scheduleQuote();
   });
@@ -1851,6 +1875,7 @@ function setupSwap() {
     const previousFrom = fromSelect.value;
     fromSelect.value = toSelect.value;
     toSelect.value = previousFrom;
+    swapExactInWei = null;
     setSwapError("");
     scheduleQuote();
     updateSwapBalance();
@@ -1890,14 +1915,12 @@ function setupSwap() {
 
     const fromToken = tokenBySymbol[fromSym];
     const path = buildPath(fromSym, toSym);
-    const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
+    let amountInWei = swapExactInWei ?? toBaseUnits(amountInput.value, fromToken.decimals);
 
     try {
-      if (walletState?.address) {
-        const bal = await getTokenBalanceRaw(fromToken.address, walletState.address);
-        if (bal < amountInWei) {
-          throw new Error(`Saldo insuficiente de ${fromSym}`);
-        }
+      amountInWei = await capAmountToBalance(fromToken.address, amountInWei);
+      if (amountInWei <= 0n) {
+        throw new Error(`Saldo insuficiente de ${fromSym}`);
       }
 
       setCta("Cotizando...", true);

@@ -18,10 +18,10 @@
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260821c" />
+    <link rel="stylesheet" href="./styles.css?v=20260821d" />
     <script src="https://unpkg.com/lucide@1.18.0" defer></script>
     <script src="./vendor/qrcode-generator.js"></script>
-    <script type="module" src="./app.js?v=20260821c"></script>
+    <script type="module" src="./app.js?v=20260821d"></script>
   </head>
   <body>
     <!-- Last deploy: 2026-06-08 14:40:35 -->
@@ -507,7 +507,7 @@
             <p class="swap-error" id="stakeError" hidden role="alert"></p>
             <p class="swap-tip">
               <i data-lucide="info" aria-hidden="true"></i>
-              <span>Unstake directo al contrato 0x525d…E00e. En Developer Portal (esta mini app, Hub) anade ese address en Contract Entrypoints, junto con RCOL. No uses MAX si World App falla: deja un poco menos.</span>
+              <span>MAX en Savings redondea de mas y World App rechaza el unstake. Aqui MAX usa el saldo on-chain exacto. Si falla, escribe un entero (1000, 10000…) sin decimales.</span>
             </p>
           </div>
         </div>

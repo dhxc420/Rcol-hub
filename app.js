@@ -1579,7 +1579,7 @@ function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
   ).trim();
   const map = {
     user_rejected: "Cancelado",
-    simulation_failed: "La simulacion fallo. Revisa saldo, baja la cantidad (no MAX) o espera el lock del pool.",
+    simulation_failed: "La simulacion fallo. En Savings no uses MAX (redondea de mas). Aqui toca MAX o escribe un entero, p.ej. 1000.",
     transaction_failed: "La transaccion fallo en cadena",
     generic_error: "World App rechazo la operacion. Si vendes RCOL, prueba un monto menor.",
     invalid_contract:
@@ -1588,7 +1588,7 @@ function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
     disallowed_operation: "Operacion no permitida por World App",
     validation_error: "La transaccion no paso la validacion",
     input_error: "Datos de transaccion invalidos",
-    daily_tx_limit_reached: "Limite diario de transacciones alcanzado",
+    daily_tx_limit_reached: "Limite diario de transacciones de World App. Espera o prueba manana.",
     invalid_operation: "Operacion invalida",
     permitted_amount_exceeds_slippage:
       "World App rechazo el monto Permit2 (deslizamiento). Prueba un monto menor.",
@@ -1762,17 +1762,66 @@ function currentStakePool() {
 }
 
 async function readStakePosition(poolId, owner) {
-  const [stakedHex, availableHex, usersHex] = await Promise.all([
-    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_BALANCE_OF, poolId, owner)),
-    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_AVAILABLE, poolId, owner)),
-    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_USERS, poolId, owner))
-  ]);
-  const users = decodeUintWords(usersHex);
+  const stakedHex = await ethCall(
+    STAKING_ADDRESS,
+    encodeStakingArgs(STAKING_BALANCE_OF, poolId, owner)
+  );
+  let rewards = 0n;
+  let lockedUntil = 0n;
+  try {
+    rewards = hexToBigInt(
+      await ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_AVAILABLE, poolId, owner))
+    );
+  } catch (error) {
+    console.warn("available() failed", error);
+  }
+  try {
+    const users = decodeUintWords(
+      await ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_USERS, poolId, owner))
+    );
+    lockedUntil = users[2] || 0n;
+  } catch (error) {
+    console.warn("users() failed", error);
+  }
   return {
     staked: hexToBigInt(stakedHex),
-    rewards: hexToBigInt(availableHex),
-    lockedUntil: users[2] || 0n
+    rewards,
+    lockedUntil
   };
+}
+
+function formatStakeWei(amountWei) {
+  return floorToDisplayAmount(amountWei, 18, 4);
+}
+
+async function simulateStakeCall(selector, from, ...args) {
+  const data = encodeStakingArgs(selector, ...args);
+  try {
+    await ethCall(STAKING_ADDRESS, data, from);
+    return null;
+  } catch (error) {
+    const reverted = decodeRevertData(error?.data);
+    const raw = reverted || String(error?.message || error || "");
+    if (/insufficient staked/i.test(raw)) return "El monto supera tu stake on-chain. Toca MAX aqui (no en Savings).";
+    if (/transfer failed/i.test(raw)) return "El contrato no pudo enviar RCOL. Prueba un monto menor.";
+    if (/nothing to redeem/i.test(raw)) return "No hay rewards para reclamar.";
+    return raw.replace(/^execution reverted:?\s*/i, "").slice(0, 180) || "La simulacion on-chain fallo.";
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForStakeDrop(poolId, owner, before, attempts = 12) {
+  for (let i = 0; i < attempts; i += 1) {
+    await sleep(2000);
+    try {
+      const now = (await readStakePosition(poolId, owner)).staked;
+      if (now < before) return now;
+    } catch {}
+  }
+  return null;
 }
 
 async function updateStakeBalances() {
@@ -1800,10 +1849,10 @@ async function updateStakeBalances() {
   try {
     const position = await readStakePosition(pool.id, walletState.address);
     stakePosition = position;
-    const stakedText = formatTokenAmount(Number(fromBaseUnits(position.staked, 18)));
-    const rewardText = fromBaseUnits(position.rewards, 18);
+    const stakedText = formatStakeWei(position.staked);
+    const rewardText = formatStakeWei(position.rewards);
     if (stakedEl) stakedEl.textContent = stakedText;
-    if (rewardEl) rewardEl.textContent = formatTokenAmount(Number(rewardText));
+    if (rewardEl) rewardEl.textContent = rewardText;
     if (valEl) valEl.textContent = stakedText;
     if (maxButton) maxButton.hidden = position.staked <= 0n;
     if (claimBtn) claimBtn.hidden = position.rewards < 1n;
@@ -1921,11 +1970,22 @@ async function unstakeRcol() {
       return;
     }
     if (amountWei > onChain.staked) amountWei = onChain.staked;
+    const simError = await simulateStakeCall(STAKING_WITHDRAW, walletState.address, pool.id, amountWei);
+    if (simError) {
+      setStakeError(simError);
+      return;
+    }
     setStakeCta("Unstake…", true);
     await sendStakeCall(STAKING_WITHDRAW, pool.id, amountWei);
     stakeExactInWei = null;
     if (amountInput) amountInput.value = "";
-    showToast("Unstake enviado");
+    setStakeCta("Confirmando…", true);
+    const confirmed = await waitForStakeDrop(pool.id, walletState.address, onChain.staked);
+    if (confirmed == null) {
+      showToast("World App acepto el unstake. Espera a que confirme; no envies otro todavia.");
+    } else {
+      showToast("Unstake confirmado");
+    }
     await updateStakeBalances();
     fetchAllBalances();
   } catch (error) {
@@ -1983,8 +2043,27 @@ async function ethCall(to, data, from) {
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [tx, "latest"] })
   });
   const json = await response.json();
-  if (json.error) throw new Error(json.error.message || "eth_call error");
+  if (json.error) {
+    const err = new Error(json.error.message || "eth_call error");
+    err.data = json.error.data;
+    throw err;
+  }
   return json.result;
+}
+
+function decodeRevertData(data) {
+  const hex = String(data || "").replace(/^0x/i, "");
+  if (hex.startsWith("08c379a0") && hex.length >= 8 + 64 * 2) {
+    const strStart = 8 + 64 * 2;
+    const strLen = parseInt(hex.slice(8 + 64, strStart), 16);
+    const strHex = hex.slice(strStart, strStart + strLen * 2);
+    try {
+      return decodeURIComponent(strHex.replace(/../g, "%$&"));
+    } catch {
+      return "";
+    }
+  }
+  return "";
 }
 
 // getAmountsOut(uint256, address[]) on-chain: cotizacion real ejecutable.

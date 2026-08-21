@@ -23,6 +23,7 @@ const STAKING_AVAILABLE = "132d6d6b"; // available(uint256,address)
 const STAKING_USERS = "b9d02df4"; // users(uint256,address)
 const STAKING_WITHDRAW = "441a3e70"; // withdraw(uint256,uint256)
 const STAKING_REDEEM = "db006a75"; // redeem(uint256)
+const UNSTAKE_CHUNK_WEI = 100_000n * 10n ** 18n; // World App bloquea sacar casi todo el pool de un golpe
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -1579,7 +1580,7 @@ function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
   ).trim();
   const map = {
     user_rejected: "Cancelado",
-    simulation_failed: "La simulacion fallo. En Savings no uses MAX (redondea de mas). Aqui toca MAX o escribe un entero, p.ej. 1000.",
+    simulation_failed: "World App rechazo la tanda. Prueba 1,000 (ya funciono) o 10,000. No uses MAX en Savings ni retires los 14M de una vez.",
     transaction_failed: "La transaccion fallo en cadena",
     generic_error: "World App rechazo la operacion. Si vendes RCOL, prueba un monto menor.",
     invalid_contract:
@@ -1790,6 +1791,23 @@ async function readStakePosition(poolId, owner) {
   };
 }
 
+function capUnstakeWei(stakedWei, requestedWei = stakedWei) {
+  const one = 10n ** 18n;
+  let amount = requestedWei > stakedWei ? stakedWei : requestedWei;
+  if (amount > UNSTAKE_CHUNK_WEI) amount = UNSTAKE_CHUNK_WEI;
+  amount = (amount / one) * one;
+  return amount > 0n ? amount : 0n;
+}
+
+function applyUnstakeAmount(amountWei) {
+  const capped = capUnstakeWei(stakePosition.staked, amountWei);
+  const input = document.querySelector("#stakeAmount");
+  stakeExactInWei = capped;
+  if (input) input.value = capped > 0n ? fromBaseUnits(capped, 18) : "";
+  setStakeError("");
+  return capped;
+}
+
 function formatStakeWei(amountWei) {
   return floorToDisplayAmount(amountWei, 18, 4);
 }
@@ -1831,6 +1849,7 @@ async function updateStakeBalances() {
   const rewardEl = document.querySelector("#stakeRewardVal");
   const hintEl = document.querySelector("#stakePoolHint");
   const lockEl = document.querySelector("#stakeLockNote");
+  const walletNote = document.querySelector("#stakeWalletNote");
   const claimBtn = document.querySelector("#stakeClaimBtn");
   const ctaSpan = document.querySelector("#stakeCta span");
   const pool = currentStakePool();
@@ -1840,6 +1859,7 @@ async function updateStakeBalances() {
     if (stakedEl) stakedEl.textContent = "0";
     if (rewardEl) rewardEl.textContent = "0";
     if (lockEl) lockEl.hidden = true;
+    if (walletNote) walletNote.hidden = true;
     if (claimBtn) claimBtn.hidden = true;
     if (ctaSpan) ctaSpan.textContent = "Conecta tu wallet";
     stakePosition = { staked: 0n, rewards: 0n, lockedUntil: 0n };
@@ -1856,6 +1876,14 @@ async function updateStakeBalances() {
     if (valEl) valEl.textContent = stakedText;
     if (maxButton) maxButton.hidden = position.staked <= 0n;
     if (claimBtn) claimBtn.hidden = position.rewards < 1n;
+    if (walletNote && walletState?.address) {
+      walletNote.hidden = false;
+      walletNote.textContent = `Wallet ${shortAddress(walletState.address)} · tanda max ${fromBaseUnits(UNSTAKE_CHUNK_WEI, 18)} RCOL`;
+    }
+    const amountInput = document.querySelector("#stakeAmount");
+    if (amountInput && !amountInput.value && position.staked > 0n) {
+      applyUnstakeAmount(1000n * 10n ** 18n);
+    }
     if (lockEl) {
       const untilMs = Number(position.lockedUntil) * 1000;
       if (position.lockedUntil > 0n && untilMs > Date.now()) {
@@ -1964,18 +1992,20 @@ async function unstakeRcol() {
       setStakeError("No tienes RCOL stakeado en este pool.");
       return;
     }
-    let amountWei = stakeExactInWei ?? toBaseUnits(amountInput?.value || "0", 18);
+    let amountWei = capUnstakeWei(
+      onChain.staked,
+      stakeExactInWei ?? toBaseUnits(amountInput?.value || "0", 18)
+    );
     if (amountWei <= 0n) {
-      setStakeError("Escribe una cantidad o toca MAX.");
+      setStakeError("Escribe una cantidad o toca 1,000 / 10,000 / 100,000.");
       return;
     }
-    if (amountWei > onChain.staked) amountWei = onChain.staked;
     const simError = await simulateStakeCall(STAKING_WITHDRAW, walletState.address, pool.id, amountWei);
-    if (simError) {
+    if (simError && /supera tu stake|no pudo enviar/i.test(simError)) {
       setStakeError(simError);
       return;
     }
-    setStakeCta("Unstake…", true);
+    setStakeCta(`Unstake ${fromBaseUnits(amountWei, 18)}…`, true);
     await sendStakeCall(STAKING_WITHDRAW, pool.id, amountWei);
     stakeExactInWei = null;
     if (amountInput) amountInput.value = "";
@@ -1984,7 +2014,7 @@ async function unstakeRcol() {
     if (confirmed == null) {
       showToast("World App acepto el unstake. Espera a que confirme; no envies otro todavia.");
     } else {
-      showToast("Unstake confirmado");
+      showToast(`Unstake confirmado: ${fromBaseUnits(onChain.staked - confirmed, 18)} RCOL. Si queda saldo, vuelve a retirar en tandas.`);
     }
     await updateStakeBalances();
     fetchAllBalances();
@@ -2003,11 +2033,13 @@ function setupStake() {
   });
   document.querySelector("#stakeMax")?.addEventListener("click", () => {
     if (stakePosition.staked <= 0n) return;
-    const input = document.querySelector("#stakeAmount");
-    const display = floorToDisplayAmount(stakePosition.staked, 18);
-    stakeExactInWei = stakePosition.staked;
-    if (input) input.value = display;
-    setStakeError("");
+    applyUnstakeAmount(UNSTAKE_CHUNK_WEI);
+  });
+  document.querySelectorAll("[data-stake-preset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tokens = BigInt(btn.dataset.stakePreset || "0");
+      applyUnstakeAmount(tokens * 10n ** 18n);
+    });
   });
   document.querySelector("#stakeAmount")?.addEventListener("input", () => {
     stakeExactInWei = null;

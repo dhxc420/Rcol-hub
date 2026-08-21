@@ -1550,6 +1550,26 @@ html[data-theme="light"] .swap-error {
   color: color-mix(in srgb, #ffb347 80%, var(--muted));
 }
 
+.stake-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stake-preset {
+  min-height: 40px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.stake-preset:active {
+  transform: scale(0.98);
+}
+
 .stake-claim {
   width: 100%;
   min-height: 44px;

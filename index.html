@@ -18,10 +18,10 @@
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260821d" />
+    <link rel="stylesheet" href="./styles.css?v=20260821e" />
     <script src="https://unpkg.com/lucide@1.18.0" defer></script>
     <script src="./vendor/qrcode-generator.js"></script>
-    <script type="module" src="./app.js?v=20260821d"></script>
+    <script type="module" src="./app.js?v=20260821e"></script>
   </head>
   <body>
     <!-- Last deploy: 2026-06-08 14:40:35 -->
@@ -481,11 +481,17 @@
               </div>
             </div>
             <p class="stake-lock" id="stakeLockNote" hidden></p>
+            <p class="panel-note" id="stakeWalletNote" hidden></p>
+            <div class="stake-presets" aria-label="Tandas de unstake">
+              <button class="stake-preset" type="button" data-stake-preset="1000">1,000</button>
+              <button class="stake-preset" type="button" data-stake-preset="10000">10,000</button>
+              <button class="stake-preset" type="button" data-stake-preset="100000">100,000</button>
+            </div>
             <div class="swap-field">
               <div class="swap-field__head">
                 <label for="stakeAmount">Cantidad a retirar</label>
                 <button class="swap-bal" id="stakeMax" type="button" hidden>
-                  Stake: <span id="stakeBalanceVal">0</span> · MAX
+                  Stake: <span id="stakeBalanceVal">0</span> · tanda
                 </button>
               </div>
               <div class="swap-row">
@@ -507,7 +513,7 @@
             <p class="swap-error" id="stakeError" hidden role="alert"></p>
             <p class="swap-tip">
               <i data-lucide="info" aria-hidden="true"></i>
-              <span>MAX en Savings redondea de mas y World App rechaza el unstake. Aqui MAX usa el saldo on-chain exacto. Si falla, escribe un entero (1000, 10000…) sin decimales.</span>
+              <span>World App bloquea retirar todo el pool (~14M) de un golpe. En Savings no uses MAX. Aqui usa 1,000 / 10,000 / 100,000 y repite. El 1,000 ya funciono on-chain.</span>
             </p>
           </div>
         </div>

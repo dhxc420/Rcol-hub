@@ -18,10 +18,10 @@
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260821b" />
+    <link rel="stylesheet" href="./styles.css?v=20260821c" />
     <script src="https://unpkg.com/lucide@1.18.0" defer></script>
     <script src="./vendor/qrcode-generator.js"></script>
-    <script type="module" src="./app.js?v=20260821b"></script>
+    <script type="module" src="./app.js?v=20260821c"></script>
   </head>
   <body>
     <!-- Last deploy: 2026-06-08 14:40:35 -->
@@ -67,7 +67,7 @@
 
       <main id="hubView">
         <section class="spotlight" aria-label="Acciones principales">
-          <a class="buy-card buy-card--gold" id="pufCta" href="https://rcol-fun.vercel.app/#staking" target="_blank" rel="noreferrer">
+          <a class="buy-card buy-card--gold" id="pufCta" href="#stake">
             <i data-lucide="landmark" aria-hidden="true"></i>
             <span>Staking RCOL</span>
           </a>
@@ -302,18 +302,12 @@
             </span>
             <span class="wallet-action__label">Recibir</span>
           </button>
-          <a
-            class="wallet-action"
-            id="qaEarn"
-            href="https://rcol-fun.vercel.app/#staking"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <button class="wallet-action" id="qaEarn" type="button" data-action="stake">
             <span class="wallet-action__icon" aria-hidden="true">
               <i data-lucide="trending-up"></i>
             </span>
-            <span class="wallet-action__label">Ganar</span>
-          </a>
+            <span class="wallet-action__label">Unstake</span>
+          </button>
         </nav>
 
         <button class="burn-mode-btn" id="modeBurnBtn" type="button">
@@ -465,6 +459,56 @@
               <span>Conecta tu wallet</span>
             </button>
             <p class="panel-note burn-note">Accion irreversible: se queman via Permit2 (mismo patron que PUF/Swap) hacia la direccion dead. Aplica el ~2% de impuesto de transferencia.</p>
+          </div>
+        </div>
+
+        <div class="panel stake-panel" id="section-stake" hidden>
+          <div class="send-box stake-box">
+            <div class="stake-pools" role="tablist" aria-label="Pool de staking">
+              <button class="stake-pool is-active" type="button" data-pool="0">Flexible</button>
+              <button class="stake-pool" type="button" data-pool="1">30 dias</button>
+              <button class="stake-pool" type="button" data-pool="2">90 dias</button>
+            </div>
+            <p class="panel-note" id="stakePoolHint">Retira cuando quieras · sin penalidad</p>
+            <div class="stake-stats">
+              <div>
+                <span class="stat-label">Stakeado</span>
+                <strong id="stakeStakedVal">0</strong>
+              </div>
+              <div>
+                <span class="stat-label">Rewards</span>
+                <strong id="stakeRewardVal">0</strong>
+              </div>
+            </div>
+            <p class="stake-lock" id="stakeLockNote" hidden></p>
+            <div class="swap-field">
+              <div class="swap-field__head">
+                <label for="stakeAmount">Cantidad a retirar</label>
+                <button class="swap-bal" id="stakeMax" type="button" hidden>
+                  Stake: <span id="stakeBalanceVal">0</span> · MAX
+                </button>
+              </div>
+              <div class="swap-row">
+                <input id="stakeAmount" type="text" inputmode="decimal" placeholder="0.0" autocomplete="off" />
+                <span class="token-pill" aria-hidden="true">
+                  <img src="./assets/rcol-coin.png" alt="" />
+                  RCOL
+                </span>
+              </div>
+            </div>
+            <button class="swap-cta" id="stakeCta" type="button">
+              <i data-lucide="landmark" aria-hidden="true"></i>
+              <span>Conecta tu wallet</span>
+            </button>
+            <button class="ghost-button stake-claim" id="stakeClaimBtn" type="button" hidden>
+              <i data-lucide="gift" aria-hidden="true"></i>
+              <span>Reclamar rewards</span>
+            </button>
+            <p class="swap-error" id="stakeError" hidden role="alert"></p>
+            <p class="swap-tip">
+              <i data-lucide="info" aria-hidden="true"></i>
+              <span>Unstake directo al contrato 0x525d…E00e. En Developer Portal (esta mini app, Hub) anade ese address en Contract Entrypoints, junto con RCOL. No uses MAX si World App falla: deja un poco menos.</span>
+            </p>
           </div>
         </div>
 

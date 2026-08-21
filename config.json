@@ -58,7 +58,7 @@
       "id": "puf",
       "title": "Staking RCOL",
       "description": "Haz staking de RCOL",
-      "url": "https://rcol-fun.vercel.app/#staking",
+      "url": "#stake",
       "icon": "landmark",
       "accent": "#facc15"
     },

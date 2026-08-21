@@ -10,8 +10,19 @@ const WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
 const EXPLORER_TOKEN_API = "https://worldchain-mainnet.explorer.alchemy.com/api/v2/tokens/";
 const DEXSCREENER_TOKENS_API = "https://api.dexscreener.com/tokens/v1/worldchain/";
 const LANDING_URL = "https://rcol-fun.vercel.app/";
-const LANDING_STAKE_URL = `${LANDING_URL}#staking`;
+const LANDING_STAKE_URL = "#stake";
 const LANDING_GAMES_URL = `${LANDING_URL}#juegos`;
+const STAKING_ADDRESS = "0x525d81A031f08cC016e0AfCfb75EE24089aDE00e";
+const STAKING_POOLS = [
+  { id: 0n, key: "flexible", label: "Flexible", hint: "Retira cuando quieras · sin penalidad" },
+  { id: 1n, key: "lock30", label: "30 dias", hint: "Lock 30d · penalidad 10% si sales antes" },
+  { id: 2n, key: "lock90", label: "90 dias", hint: "Lock 90d · penalidad 15% si sales antes" }
+];
+const STAKING_BALANCE_OF = "3656eec2"; // balanceOf(uint256,address)
+const STAKING_AVAILABLE = "132d6d6b"; // available(uint256,address)
+const STAKING_USERS = "b9d02df4"; // users(uint256,address)
+const STAKING_WITHDRAW = "441a3e70"; // withdraw(uint256,uint256)
+const STAKING_REDEEM = "db006a75"; // redeem(uint256)
 const BURN_ADDRESSES = [
   "0x000000000000000000000000000000000000dEaD",
   "0x0000000000000000000000000000000000000000"
@@ -687,14 +698,14 @@ function applyConfig(config) {
 
   const puf = config.links.find((link) => link.id === "puf");
   const pufCta = document.querySelector("#pufCta");
-  const qaEarn = document.querySelector("#qaEarn");
   if (puf && !isPlaceholder(puf.url)) {
     if (pufCta) {
-      pufCta.href = puf.url;
+      pufCta.href = isInternalAnchor(puf.url) ? puf.url : "#stake";
+      pufCta.removeAttribute("target");
+      pufCta.removeAttribute("rel");
       const label = pufCta.querySelector("span");
       if (label) label.textContent = puf.title || "Staking RCOL";
     }
-    if (qaEarn) qaEarn.href = puf.url;
   }
 
   renderAnnouncements(config.announcements || []);
@@ -1317,7 +1328,7 @@ function setupWallet() {
     if (!walletState) return;
     const icon = document.querySelector("#walletRefresh");
     icon?.classList.add("is-spinning");
-    Promise.resolve(fetchAllBalances()).finally(() =>
+    Promise.resolve(fetchAllBalances()).then(() => updateStakeBalances()).finally(() =>
       setTimeout(() => icon?.classList.remove("is-spinning"), 600)
     );
   });
@@ -1542,7 +1553,7 @@ let quoteTimer = null;
 let quoteSeq = 0;
 
 function openStakingApp() {
-  window.open(LANDING_STAKE_URL, "_blank", "noreferrer");
+  location.hash = "#stake";
 }
 
 function isValidAddress(value) {
@@ -1568,11 +1579,11 @@ function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
   ).trim();
   const map = {
     user_rejected: "Cancelado",
-    simulation_failed: "La simulacion fallo. Revisa saldo de RCOL/WLD o baja la cantidad.",
+    simulation_failed: "La simulacion fallo. Revisa saldo, baja la cantidad (no MAX) o espera el lock del pool.",
     transaction_failed: "La transaccion fallo en cadena",
     generic_error: "World App rechazo la operacion. Si vendes RCOL, prueba un monto menor.",
     invalid_contract:
-      "Falta permitir RCOL y WLD en Mini App Permissions (Developer Portal: Permit2 Tokens + Permit2 y Universal Router).",
+      "Falta whitelist en Developer Portal. Swap: RCOL, WLD, Permit2 y Universal Router. Unstake: anade tambien staking 0x525d81A031f08cC016e0AfCfb75EE24089aDE00e en Contract Entrypoints.",
     malicious_operation: "World App bloqueo la operacion por seguridad",
     disallowed_operation: "Operacion no permitida por World App",
     validation_error: "La transaccion no paso la validacion",
@@ -1699,6 +1710,257 @@ async function capAmountToBalance(tokenAddress, amountWei) {
   if (!walletState?.address || amountWei <= 0n) return amountWei;
   const bal = await getTokenBalanceRaw(tokenAddress, walletState.address);
   return amountWei > bal ? bal : amountWei;
+}
+
+function encodeStakingArgs(selector, ...values) {
+  const body = values
+    .map((value) => {
+      if (typeof value === "string" && value.startsWith("0x")) return pad32(value.slice(2));
+      return pad32(BigInt(value).toString(16));
+    })
+    .join("");
+  return `0x${selector}${body}`;
+}
+
+function hexToBigInt(hex) {
+  if (!hex || hex === "0x") return 0n;
+  return BigInt(hex);
+}
+
+function decodeUintWords(hex) {
+  const raw = String(hex || "0x").replace(/^0x/i, "");
+  if (!raw) return [];
+  const words = [];
+  for (let i = 0; i < raw.length; i += 64) {
+    words.push(BigInt(`0x${raw.slice(i, i + 64) || "0"}`));
+  }
+  return words;
+}
+
+let selectedStakePool = 0;
+let stakeExactInWei = null;
+let stakePosition = {
+  staked: 0n,
+  rewards: 0n,
+  lockedUntil: 0n
+};
+
+function setStakeError(message) {
+  const el = document.querySelector("#stakeError");
+  if (!el) return;
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+}
+
+function currentStakePool() {
+  return STAKING_POOLS[selectedStakePool] || STAKING_POOLS[0];
+}
+
+async function readStakePosition(poolId, owner) {
+  const [stakedHex, availableHex, usersHex] = await Promise.all([
+    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_BALANCE_OF, poolId, owner)),
+    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_AVAILABLE, poolId, owner)),
+    ethCall(STAKING_ADDRESS, encodeStakingArgs(STAKING_USERS, poolId, owner))
+  ]);
+  const users = decodeUintWords(usersHex);
+  return {
+    staked: hexToBigInt(stakedHex),
+    rewards: hexToBigInt(availableHex),
+    lockedUntil: users[2] || 0n
+  };
+}
+
+async function updateStakeBalances() {
+  const maxButton = document.querySelector("#stakeMax");
+  const valEl = document.querySelector("#stakeBalanceVal");
+  const stakedEl = document.querySelector("#stakeStakedVal");
+  const rewardEl = document.querySelector("#stakeRewardVal");
+  const hintEl = document.querySelector("#stakePoolHint");
+  const lockEl = document.querySelector("#stakeLockNote");
+  const claimBtn = document.querySelector("#stakeClaimBtn");
+  const ctaSpan = document.querySelector("#stakeCta span");
+  const pool = currentStakePool();
+  if (hintEl) hintEl.textContent = pool.hint;
+  if (!walletState) {
+    if (maxButton) maxButton.hidden = true;
+    if (stakedEl) stakedEl.textContent = "0";
+    if (rewardEl) rewardEl.textContent = "0";
+    if (lockEl) lockEl.hidden = true;
+    if (claimBtn) claimBtn.hidden = true;
+    if (ctaSpan) ctaSpan.textContent = "Conecta tu wallet";
+    stakePosition = { staked: 0n, rewards: 0n, lockedUntil: 0n };
+    return;
+  }
+  if (ctaSpan) ctaSpan.textContent = "Unstake RCOL";
+  try {
+    const position = await readStakePosition(pool.id, walletState.address);
+    stakePosition = position;
+    const stakedText = formatTokenAmount(Number(fromBaseUnits(position.staked, 18)));
+    const rewardText = fromBaseUnits(position.rewards, 18);
+    if (stakedEl) stakedEl.textContent = stakedText;
+    if (rewardEl) rewardEl.textContent = formatTokenAmount(Number(rewardText));
+    if (valEl) valEl.textContent = stakedText;
+    if (maxButton) maxButton.hidden = position.staked <= 0n;
+    if (claimBtn) claimBtn.hidden = position.rewards < 1n;
+    if (lockEl) {
+      const untilMs = Number(position.lockedUntil) * 1000;
+      if (position.lockedUntil > 0n && untilMs > Date.now()) {
+        const days = Math.max(1, Math.ceil((untilMs - Date.now()) / 86400000));
+        lockEl.hidden = false;
+        lockEl.textContent = `Lock activo ~${days}d. Puedes salir ahora con penalidad.`;
+      } else {
+        lockEl.hidden = true;
+        lockEl.textContent = "";
+      }
+    }
+  } catch (error) {
+    console.error("stake read failed", error);
+    if (stakedEl) stakedEl.textContent = "—";
+    if (rewardEl) rewardEl.textContent = "—";
+    setStakeError("No se pudo leer tu stake on-chain");
+  }
+}
+
+async function pickPoolWithStake() {
+  if (!walletState?.address) return;
+  try {
+    const positions = await Promise.all(
+      STAKING_POOLS.map((pool) => readStakePosition(pool.id, walletState.address))
+    );
+    const best = positions.findIndex((position) => position.staked > 0n);
+    if (best >= 0 && best !== selectedStakePool) selectStakePool(best);
+  } catch (error) {
+    console.error("stake pool scan failed", error);
+  }
+}
+
+function selectStakePool(index) {
+  selectedStakePool = Number(index) || 0;
+  stakeExactInWei = null;
+  const amountInput = document.querySelector("#stakeAmount");
+  if (amountInput) amountInput.value = "";
+  document.querySelectorAll(".stake-pool").forEach((btn) => {
+    btn.classList.toggle("is-active", Number(btn.dataset.pool) === selectedStakePool);
+  });
+  updateStakeBalances();
+}
+
+function setStakeCta(label, busy) {
+  const btn = document.querySelector("#stakeCta");
+  const span = btn?.querySelector("span");
+  if (span) span.textContent = label;
+  if (btn) btn.disabled = Boolean(busy);
+}
+
+async function sendStakeCall(selector, ...args) {
+  return sendWorldTx([
+    {
+      to: STAKING_ADDRESS,
+      data: encodeStakingArgs(selector, ...args)
+    }
+  ]);
+}
+
+async function claimStakeRewards() {
+  if (!worldAppReady || !MiniKitApi) {
+    showToast("Abre RCOL Hub en World App");
+    return;
+  }
+  if (!walletState) {
+    const ok = await connectWallet();
+    if (!ok) return;
+  }
+  setStakeError("");
+  const pool = currentStakePool();
+  try {
+    const pending = (await readStakePosition(pool.id, walletState.address)).rewards;
+    if (pending < 1n) {
+      showToast("No hay rewards para reclamar");
+      return;
+    }
+    setStakeCta("Reclamando…", true);
+    await sendStakeCall(STAKING_REDEEM, pool.id);
+    showToast("Rewards enviados a tu wallet");
+    await updateStakeBalances();
+  } catch (error) {
+    const message = minikitTxErrorMessage(error, "No se pudieron reclamar rewards");
+    setStakeError(message);
+    showToast(message, 6000);
+  } finally {
+    setStakeCta(walletState ? "Unstake RCOL" : "Conecta tu wallet", false);
+  }
+}
+
+async function unstakeRcol() {
+  if (!worldAppReady || !MiniKitApi) {
+    showToast("Abre RCOL Hub en World App para unstake");
+    return;
+  }
+  if (!walletState) {
+    const ok = await connectWallet();
+    if (!ok) return;
+  }
+  const amountInput = document.querySelector("#stakeAmount");
+  const pool = currentStakePool();
+  setStakeError("");
+  try {
+    const onChain = await readStakePosition(pool.id, walletState.address);
+    stakePosition = onChain;
+    if (onChain.staked <= 0n) {
+      setStakeError("No tienes RCOL stakeado en este pool.");
+      return;
+    }
+    let amountWei = stakeExactInWei ?? toBaseUnits(amountInput?.value || "0", 18);
+    if (amountWei <= 0n) {
+      setStakeError("Escribe una cantidad o toca MAX.");
+      return;
+    }
+    if (amountWei > onChain.staked) amountWei = onChain.staked;
+    setStakeCta("Unstake…", true);
+    await sendStakeCall(STAKING_WITHDRAW, pool.id, amountWei);
+    stakeExactInWei = null;
+    if (amountInput) amountInput.value = "";
+    showToast("Unstake enviado");
+    await updateStakeBalances();
+    fetchAllBalances();
+  } catch (error) {
+    const message = minikitTxErrorMessage(error, "No se pudo hacer unstake");
+    setStakeError(message);
+    showToast(message, 6000);
+  } finally {
+    setStakeCta(walletState ? "Unstake RCOL" : "Conecta tu wallet", false);
+  }
+}
+
+function setupStake() {
+  document.querySelectorAll(".stake-pool").forEach((btn) => {
+    btn.addEventListener("click", () => selectStakePool(Number(btn.dataset.pool)));
+  });
+  document.querySelector("#stakeMax")?.addEventListener("click", () => {
+    if (stakePosition.staked <= 0n) return;
+    const input = document.querySelector("#stakeAmount");
+    const display = floorToDisplayAmount(stakePosition.staked, 18);
+    stakeExactInWei = stakePosition.staked;
+    if (input) input.value = display;
+    setStakeError("");
+  });
+  document.querySelector("#stakeAmount")?.addEventListener("input", () => {
+    stakeExactInWei = null;
+    setStakeError("");
+  });
+  document.querySelector("#stakeCta")?.addEventListener("click", async () => {
+    if (!walletState) {
+      await connectWallet();
+      return;
+    }
+    await unstakeRcol();
+  });
+  document.querySelector("#stakeClaimBtn")?.addEventListener("click", claimStakeRewards);
 }
 
 function pad32(hexNoPrefix) {
@@ -1972,6 +2234,7 @@ function setupSwap() {
 
   setupSendRcol();
   setupBurnRcol();
+  setupStake();
   setupWalletMode();
   updateSwapTeaser();
   refreshSwapRate();
@@ -1981,13 +2244,15 @@ function setupSwap() {
 function syncWalletQuickActions(mode) {
   const isSend = mode === "send";
   const isBurn = mode === "burn";
-  const isSwap = !isSend && !isBurn;
+  const isStake = mode === "stake";
+  const isSwap = !isSend && !isBurn && !isStake;
   const receiveActive = isSend && payPane === "receive";
   const sendActive = isSend && payPane !== "receive";
 
   document.querySelector("#qaSwap")?.classList.toggle("is-active", isSwap);
   document.querySelector("#qaSend")?.classList.toggle("is-active", sendActive);
   document.querySelector("#qaReceive")?.classList.toggle("is-active", receiveActive);
+  document.querySelector("#qaEarn")?.classList.toggle("is-active", isStake);
   document.querySelector("#modeBurnBtn")?.classList.toggle("is-active", isBurn);
 }
 
@@ -2010,25 +2275,35 @@ function setWalletMode(mode) {
   try {
     const isSend = mode === "send";
     const isBurn = mode === "burn";
-    const isSwap = !isSend && !isBurn;
+    const isStake = mode === "stake";
+    const isSwap = !isSend && !isBurn && !isStake;
     const swapPanel = document.querySelector("#section-swap");
     const sendPanel = document.querySelector("#section-send");
     const burnPanel = document.querySelector("#section-burn");
+    const stakePanel = document.querySelector("#section-stake");
     const rateRow = document.querySelector("#swapRate");
     const title = document.querySelector(".swap-view .view-topbar strong");
 
     if (swapPanel) swapPanel.hidden = !isSwap;
     if (sendPanel) sendPanel.hidden = !isSend;
     if (burnPanel) burnPanel.hidden = !isBurn;
+    if (stakePanel) stakePanel.hidden = !isStake;
+    if (isStake && location.hash !== "#stake") {
+      history.replaceState(null, "", "#stake");
+    } else if (!isStake && (location.hash === "#stake" || location.hash.startsWith("#stake?"))) {
+      history.replaceState(null, "", "#swap");
+    }
     if (rateRow) rateRow.hidden = !isSwap || !rateRow.dataset.hasRate;
     renderTxHistory();
 
     if (title) {
       title.textContent = isBurn
         ? "Quemar RCOL"
-        : isSend
-          ? (payPane === "receive" ? "Recibir RCOL" : "Enviar")
-          : "Swap RCOL";
+        : isStake
+          ? "Unstake RCOL"
+          : isSend
+            ? (payPane === "receive" ? "Recibir RCOL" : "Enviar")
+            : "Swap RCOL";
     }
     syncWalletQuickActions(mode);
 
@@ -2036,6 +2311,7 @@ function setWalletMode(mode) {
       updateSendBalance();
       refreshReceiveQr();
     } else if (isBurn) updateBurnBalance();
+    else if (isStake) updateStakeBalances();
     else scheduleQuote();
     window.lucide?.createIcons?.();
   } catch (error) {
@@ -2045,12 +2321,16 @@ function setWalletMode(mode) {
 }
 
 function setupWalletMode() {
-  document.querySelector("#qaSwap")?.addEventListener("click", () => setWalletMode("swap"));
+  document.querySelector("#qaSwap")?.addEventListener("click", () => {
+    if (location.hash === "#stake") location.hash = "#swap";
+    else setWalletMode("swap");
+  });
   document.querySelector("#qaSend")?.addEventListener("click", () => openSendRcol());
   document.querySelector("#qaReceive")?.addEventListener("click", () => openReceiveRcol());
   document.querySelector("#qaEarn")?.addEventListener("click", (event) => {
     event.preventDefault();
-    window.open(LANDING_STAKE_URL, "_blank", "noreferrer");
+    if (location.hash !== "#stake") location.hash = "#stake";
+    else setWalletMode("stake");
   });
   document.querySelector("#modeBurnBtn")?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -3037,7 +3317,8 @@ function setSwapRate(rateText, shortText) {
     row.dataset.hasRate = "1";
     const sendMode = !document.querySelector("#section-send")?.hidden;
     const burnMode = !document.querySelector("#section-burn")?.hidden;
-    row.hidden = Boolean(sendMode || burnMode);
+    const stakeMode = !document.querySelector("#section-stake")?.hidden;
+    row.hidden = Boolean(sendMode || burnMode || stakeMode);
   }
 }
 
@@ -3056,10 +3337,13 @@ function renderSwapView() {
   scheduleQuote();
   updateSendBalance();
   updateBurnBalance();
+  updateStakeBalances();
   const sendCta = document.querySelector("#sendCta span");
   if (sendCta) sendCta.textContent = walletState ? "Enviar RCOL" : "Conecta tu wallet";
   const burnCta = document.querySelector("#burnCta span");
   if (burnCta) burnCta.textContent = walletState ? "Quemar RCOL" : "Conecta tu wallet";
+  const stakeCta = document.querySelector("#stakeCta span");
+  if (stakeCta) stakeCta.textContent = walletState ? "Unstake RCOL" : "Conecta tu wallet";
 }
 
 // Fallback visual si World no entrega foto de perfil.
@@ -3173,7 +3457,15 @@ function setupViews() {
     });
     window.scrollTo({ top: 0 });
     window.lucide?.createIcons?.();
-    if (isSwap) renderSwapView();
+    if (isSwap) {
+      renderSwapView();
+      if (location.hash === "#stake" || location.hash.startsWith("#stake?")) {
+        setWalletMode("stake");
+        pickPoolWithStake();
+      } else if (!document.querySelector("#section-stake")?.hidden) {
+        setWalletMode("swap");
+      }
+    }
   };
 
   const applyPayDeepLink = () => {
@@ -3202,7 +3494,9 @@ function setupViews() {
   const route = () => {
     const hash = location.hash || "";
     if (hash === "#nft" || hash.startsWith("#nft?")) showView("nft");
-    else if (hash === "#swap" || hash.startsWith("#swap?")) {
+    else if (hash === "#stake" || hash.startsWith("#stake?")) {
+      showView("swap");
+    } else if (hash === "#swap" || hash.startsWith("#swap?")) {
       showView("swap");
       applyPayDeepLink();
     } else showView("hub");
@@ -3215,7 +3509,7 @@ function setupViews() {
     if (href === "#nft" || href === "#swap") return;
     a.addEventListener("click", (event) => {
       event.preventDefault();
-      if (location.hash === "#nft" || location.hash === "#swap") {
+      if (location.hash === "#nft" || location.hash === "#swap" || location.hash === "#stake") {
         history.replaceState(null, "", location.pathname + location.search);
       }
       showView("hub");

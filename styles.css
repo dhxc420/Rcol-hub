@@ -1201,7 +1201,8 @@ html[data-theme="light"] .swap-error {
 
 .send-panel[hidden],
 .swap-panel[hidden],
-.burn-panel[hidden] {
+.burn-panel[hidden],
+.stake-panel[hidden] {
   display: none;
 }
 
@@ -1496,6 +1497,76 @@ html[data-theme="light"] .swap-error {
 
 .burn-note {
   color: color-mix(in srgb, #ff6b84 75%, var(--muted));
+}
+
+.stake-panel {
+  margin-top: 0;
+}
+
+.stake-pools {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stake-pool {
+  min-height: 42px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.stake-pool.is-active {
+  background: color-mix(in srgb, var(--gold, #f8d66d) 18%, var(--chip));
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--gold, #f8d66d) 45%, var(--line));
+}
+
+.stake-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stake-stats div {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--chip);
+  border: 1px solid var(--line-soft);
+}
+
+.stake-stats strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.05rem;
+}
+
+.stake-lock {
+  margin: 0;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, #ffb347 80%, var(--muted));
+}
+
+.stake-claim {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+}
+
+#stakeAmount {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font-size: 1.45rem;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  outline: none;
 }
 
 .send-box {

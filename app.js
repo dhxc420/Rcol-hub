@@ -38,8 +38,10 @@ const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 const V2_SWAP_EXACT_IN = "0x08"; // comando del Universal Router
 const PERMIT2_TRANSFER_FROM = "0x02"; // jala ERC20 via Permit2 hacia un destinatario
 const UR_MSG_SENDER = "0x0000000000000000000000000000000000000001"; // constante: el destinatario es quien firma
-// RCOL cobra ~2% de impuesto en cada transferencia (token fee-on-transfer),
-// que getAmountsOut no refleja. El slippage debe cubrir ese impuesto + movimiento.
+// RCOL cobra ~2% de impuesto en cada transferencia (token fee-on-transfer).
+// getAmountsOut no lo refleja: al vender RCOL cotizamos el 98% y el swap
+// manda los tokens al pool ANTES de ejecutar (amountIn = 0 / ALREADY_PAID).
+const RCOL_TRANSFER_TAX_BPS = 200n; // 2.0%
 const SWAP_SLIPPAGE_BPS = 400n; // 4.0%
 const SWAP_DEADLINE_MIN = 20;
 
@@ -1545,26 +1547,80 @@ function encodeErc20Transfer(to, amount) {
 function minikitTxErrorMessage(error, fallback = "Error de transaccion") {
   const rawMessage = String(error?.message || error || "").trim();
   const fromMessage = rawMessage.match(/Transaction failed:\s*([a-z0-9_]+)/i)?.[1];
+  const nested = error?.details && typeof error.details === "object" ? error.details : {};
   const code = String(
-    error?.code || error?.error_code || error?.details?.error_code || fromMessage || ""
+    error?.code ||
+      error?.error_code ||
+      nested.error_code ||
+      nested.code ||
+      error?.data?.error_code ||
+      fromMessage ||
+      ""
   ).trim();
   const map = {
     user_rejected: "Cancelado",
-    simulation_failed: "La simulacion fallo (saldo, gas o el token rechazo el envio)",
+    simulation_failed: "La simulacion fallo. Revisa saldo de RCOL/WLD o baja la cantidad.",
     transaction_failed: "La transaccion fallo en cadena",
-    generic_error: "World App rechazo la operacion",
-    invalid_contract: "Contrato no permitido en el portal de World",
+    generic_error: "World App rechazo la operacion. Si vendes RCOL, prueba un monto menor.",
+    invalid_contract:
+      "Falta permitir RCOL y WLD en Mini App Permissions (Developer Portal: Permit2 Tokens + Permit2 y Universal Router).",
     malicious_operation: "World App bloqueo la operacion por seguridad",
     disallowed_operation: "Operacion no permitida por World App",
     validation_error: "La transaccion no paso la validacion",
     input_error: "Datos de transaccion invalidos",
     daily_tx_limit_reached: "Limite diario de transacciones alcanzado",
-    invalid_operation: "Operacion invalida"
+    invalid_operation: "Operacion invalida",
+    permitted_amount_exceeds_slippage:
+      "World App rechazo el monto Permit2 (deslizamiento). Prueba un monto menor.",
+    permitted_amount_not_found: "World App no encontro el monto Permit2 del swap"
   };
-  if (code && map[code]) return `${map[code]} (${code})`;
+  if (code && map[code]) return map[code];
   if (/reject|cancel|denied/i.test(rawMessage)) return "Cancelado";
+  const reason = nested.reason || nested.message;
+  if (reason) return String(reason);
+  if (rawMessage && !/^Transaction failed:/i.test(rawMessage)) return rawMessage;
   if (rawMessage) return rawMessage;
   return fallback;
+}
+
+function unwrapMiniKitTx(result) {
+  const data = result?.data && typeof result.data === "object" ? result.data : result;
+  const nested = data?.details && typeof data.details === "object" ? data.details : {};
+  const code = String(
+    data?.error_code || data?.code || nested.error_code || result?.error_code || ""
+  ).trim();
+  if (code || data?.status === "error") {
+    const err = new Error(`Transaction failed: ${code || "generic_error"}`);
+    err.code = code || "generic_error";
+    err.details = data?.details || data;
+    throw err;
+  }
+  if (!data) throw new Error("Sin respuesta de World App");
+  return data;
+}
+
+async function sendWorldTx(transactions) {
+  const result = await MiniKitApi.sendTransaction({
+    chainId: 480,
+    transactions: transactions.map((tx) => ({
+      to: tx.to,
+      data: tx.data,
+      value: tx.value || "0x0"
+    }))
+  });
+  return unwrapMiniKitTx(result);
+}
+
+function setSwapError(message) {
+  const el = document.querySelector("#swapError");
+  if (!el) return;
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
 }
 
 async function sendRcolTransfer(to, amountWei) {
@@ -1590,13 +1646,10 @@ async function sendRcolTransfer(to, amountWei) {
   const transferInput = encodePermit2TransferFromInput(RCOL_ADDRESS, to, amountWei);
   const executeData = encodeUniversalRouterExecute(PERMIT2_TRANSFER_FROM, transferInput, deadline);
 
-  return MiniKitApi.sendTransaction({
-    chainId: 480,
-    transactions: [
-      { to: PERMIT2, value: "0x0", data: approveData },
-      { to: UNIVERSAL_ROUTER, value: "0x0", data: executeData }
-    ]
-  });
+  return sendWorldTx([
+    { to: PERMIT2, data: approveData },
+    { to: UNIVERSAL_ROUTER, data: executeData }
+  ]);
 }
 
 // PUF quema con helper+Permit2 (no transfer ERC20 directo a dead — World lo bloquea).
@@ -1663,13 +1716,13 @@ async function quoteAmountOut(amountInWei, path) {
 
 // Codifica el input del comando V2_SWAP_EXACT_IN del Universal Router:
 // (address recipient, uint256 amountIn, uint256 amountOutMin, address[] path, bool payerIsUser)
-function encodeV2SwapInput(recipient, amountIn, minOut, path) {
+function encodeV2SwapInput(recipient, amountIn, minOut, path, payerIsUser = true) {
   const head =
     pad32(recipient.slice(2)) +
     pad32(amountIn.toString(16)) +
     pad32(minOut.toString(16)) +
     pad32("a0") +
-    pad32("1"); // payerIsUser = true: jala los tokens de quien firma via Permit2
+    pad32(payerIsUser ? "1" : "0");
   const tail = pad32(path.length.toString(16)) + path.map((addr) => pad32(addr.slice(2))).join("");
   return "0x" + head + tail;
 }
@@ -1694,15 +1747,63 @@ function encodeDynBytes(hexNoPrefix) {
 }
 
 // Calldata de UniversalRouter.execute(bytes commands, bytes[] inputs, uint256 deadline).
-function encodeUniversalRouterExecute(commandHex, inputHex, deadline) {
-  const commandsTail = encodeDynBytes(commandHex.replace(/^0x/, ""));
-  const inputElem = encodeDynBytes(inputHex.replace(/^0x/, ""));
+// commandsHex puede ser un comando ("0x08") o varios concatenados ("0x0208").
+// inputsHex: un bytes o un arreglo de bytes, uno por comando.
+function encodeUniversalRouterExecute(commandsHex, inputsHex, deadline) {
+  const commands = String(commandsHex).replace(/^0x/i, "");
+  const inputList = (Array.isArray(inputsHex) ? inputsHex : [inputsHex]).map((hex) =>
+    String(hex).replace(/^0x/i, "")
+  );
+  const commandsTail = encodeDynBytes(commands);
+  const elems = inputList.map((hex) => encodeDynBytes(hex));
+  const n = elems.length;
+  let offset = 32 * n;
+  const offsetWords = [];
+  for (const elem of elems) {
+    offsetWords.push(pad32(offset.toString(16)));
+    offset += elem.length / 2;
+  }
+  const inputsTail = pad32(n.toString(16)) + offsetWords.join("") + elems.join("");
   const offCommands = 0x60;
   const offInputs = offCommands + commandsTail.length / 2;
-  // inputs (bytes[]): longitud del arreglo + offset al primer elemento + elemento.
-  const inputsTail = pad32("1") + pad32("20") + inputElem;
-  const head = pad32(offCommands.toString(16)) + pad32(offInputs.toString(16)) + pad32(deadline.toString(16));
+  const head =
+    pad32(offCommands.toString(16)) + pad32(offInputs.toString(16)) + pad32(deadline.toString(16));
   return "0x" + UR_EXECUTE_SELECTOR + head + commandsTail + inputsTail;
+}
+
+function firstPoolForPath(path) {
+  const [tokenA, tokenB] = path;
+  if (!tokenA || !tokenB) return null;
+  const a = tokenA.toLowerCase();
+  const b = tokenB.toLowerCase();
+  const rcol = RCOL_ADDRESS.toLowerCase();
+  const wld = WLD_ADDRESS.toLowerCase();
+  if ((a === rcol && b === wld) || (a === wld && b === rcol)) return RCOL_POOL;
+  return null;
+}
+
+function taxableSwapIn(fromSym, amountInWei) {
+  if (fromSym !== "RCOL" || amountInWei <= 0n) return amountInWei;
+  return (amountInWei * (10000n - RCOL_TRANSFER_TAX_BPS)) / 10000n;
+}
+
+function encodeSwapExecute(fromSym, fromToken, amountInWei, minOut, path, deadline) {
+  // Vender RCOL: el 2% de impuesto llega al pool. Mandamos RCOL al par con
+  // Permit2 y luego V2_SWAP_EXACT_IN con amountIn=0 (ALREADY_PAID) para que el
+  // router use el balance real del par en vez de asumir el monto completo.
+  if (fromSym === "RCOL") {
+    const pair = firstPoolForPath(path);
+    if (!pair) throw new Error("No hay pool RCOL/WLD para este par");
+    const transferInput = encodePermit2TransferFromInput(fromToken.address, pair, amountInWei);
+    const swapInput = encodeV2SwapInput(UR_MSG_SENDER, 0n, minOut, path, false);
+    return encodeUniversalRouterExecute(
+      `${PERMIT2_TRANSFER_FROM}${V2_SWAP_EXACT_IN.slice(2)}`,
+      [transferInput, swapInput],
+      deadline
+    );
+  }
+  const swapInput = encodeV2SwapInput(UR_MSG_SENDER, amountInWei, minOut, path, true);
+  return encodeUniversalRouterExecute(V2_SWAP_EXACT_IN, swapInput, deadline);
 }
 
 /* ---------- Swap ---------- */
@@ -1732,19 +1833,25 @@ function setupSwap() {
 
   fromSelect.addEventListener("change", () => {
     enforcePair(fromSelect);
+    setSwapError("");
     scheduleQuote();
     updateSwapBalance();
   });
   toSelect.addEventListener("change", () => {
     enforcePair(toSelect);
+    setSwapError("");
     scheduleQuote();
   });
-  amountInput.addEventListener("input", scheduleQuote);
+  amountInput.addEventListener("input", () => {
+    setSwapError("");
+    scheduleQuote();
+  });
 
   invertButton.addEventListener("click", () => {
     const previousFrom = fromSelect.value;
     fromSelect.value = toSelect.value;
     toSelect.value = previousFrom;
+    setSwapError("");
     scheduleQuote();
     updateSwapBalance();
   });
@@ -1762,6 +1869,7 @@ function setupSwap() {
     const fromSym = fromSelect.value;
     const toSym = toSelect.value;
     const amount = parseFloat(amountInput.value);
+    setSwapError("");
 
     if (!worldAppReady || !MiniKitApi) {
       showToast("Abre el hub en World App para firmar el swap");
@@ -1785,33 +1893,39 @@ function setupSwap() {
     const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
 
     try {
+      if (walletState?.address) {
+        const bal = await getTokenBalanceRaw(fromToken.address, walletState.address);
+        if (bal < amountInWei) {
+          throw new Error(`Saldo insuficiente de ${fromSym}`);
+        }
+      }
+
       setCta("Cotizando...", true);
-      const amountOut = await quoteAmountOut(amountInWei, path);
+      const quotedIn = taxableSwapIn(fromSym, amountInWei);
+      const amountOut = await quoteAmountOut(quotedIn, path);
       if (!amountOut || amountOut === 0n) {
         showToast("Sin liquidez para ese par ahora");
         return;
       }
       const minOut = (amountOut * (10000n - SWAP_SLIPPAGE_BPS)) / 10000n;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + SWAP_DEADLINE_MIN * 60);
-      const swapInput = encodeV2SwapInput(UR_MSG_SENDER, amountInWei, minOut, path);
-
-      // MiniKit v2: calldata pre-codificado, transactions (plural), expiration 0 en Permit2.approve.
       const approveData = encodePermit2Approve(fromToken.address, UNIVERSAL_ROUTER, amountInWei, 0n);
-      const executeData = encodeUniversalRouterExecute(V2_SWAP_EXACT_IN, swapInput, deadline);
+      const executeData = encodeSwapExecute(fromSym, fromToken, amountInWei, minOut, path, deadline);
 
       setCta("Confirma en tu wallet...", true);
-      const result = await MiniKitApi.sendTransaction({
-        chainId: 480,
-        transactions: [
-          { to: PERMIT2, data: approveData },
-          { to: UNIVERSAL_ROUTER, data: executeData }
-        ]
-      });
+      const result = await sendWorldTx([
+        { to: PERMIT2, data: approveData },
+        { to: UNIVERSAL_ROUTER, data: executeData }
+      ]);
 
-      // v2 resuelve con los datos en exito y LANZA en error (lo captura el catch).
       console.log("RCOL swap result:", result);
       const outNum = Number(fromBaseUnits(amountOut, tokenBySymbol[toSym].decimals));
-      const txHash = result?.transaction_id || result?.transactionId || result?.hash || null;
+      const txHash =
+        result?.userOpHash ||
+        result?.transaction_id ||
+        result?.transactionId ||
+        result?.hash ||
+        null;
       saveTxToHistory(fromSym, toSym, amount, outNum, txHash);
       showToast(`Swap enviado: ${amount} ${fromSym} a ${toSym}`);
       amountInput.value = "";
@@ -1821,11 +1935,12 @@ function setupSwap() {
       setTimeout(updateSwapBalance, 12000);
     } catch (error) {
       console.error("Swap error:", error);
-      const message = error?.message || error?.error_code || String(error);
-      if (/reject|cancel|denied/i.test(message)) {
+      const message = minikitTxErrorMessage(error, "Swap fallo");
+      if (message === "Cancelado") {
         showToast("Swap cancelado");
       } else {
-        showToast(`Swap fallo: ${message}`);
+        setSwapError(message);
+        showToast(message, 6000);
       }
     } finally {
       setCta(walletState ? "Swap ahora" : "Conecta tu wallet", false);
@@ -2455,7 +2570,8 @@ async function runQuote() {
   try {
     const path = buildPath(fromSym, toSym);
     const amountInWei = toBaseUnits(amountInput.value, fromToken.decimals);
-    const amountOut = await quoteAmountOut(amountInWei, path);
+    const quotedIn = taxableSwapIn(fromSym, amountInWei);
+    const amountOut = await quoteAmountOut(quotedIn, path);
     if (seq !== quoteSeq) return; // llego una cotizacion mas nueva
 
     if (!amountOut || amountOut === 0n) {

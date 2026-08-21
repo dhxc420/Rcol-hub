@@ -1172,6 +1172,27 @@ html[data-theme="light"] .swap-fee {
   min-width: 0;
 }
 
+.swap-error {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #f87171 45%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #fecaca;
+  text-align: left;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.swap-error[hidden] {
+  display: none;
+}
+
+html[data-theme="light"] .swap-error {
+  color: #991b1b;
+  background: color-mix(in srgb, #f87171 10%, #fff);
+}
+
 .send-panel {
   margin-top: 0;
   display: grid;
